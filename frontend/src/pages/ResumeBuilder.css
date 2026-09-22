@@ -1,0 +1,932 @@
+/* =========================================
+   RESUME BUILDER PAGE
+========================================= */
+
+.resume-builder {
+    min-height: 100vh;
+    background: #f5f7fb;
+
+    display: grid;
+    grid-template-columns: 500px 1fr;
+
+    gap: 28px;
+
+    padding: 28px;
+
+    color: #111827;
+}
+
+
+/* =========================================
+   LEFT BUILDER PANEL
+========================================= */
+
+.builder-panel {
+    width: 100%;
+    max-width: 500px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    padding: 24px;
+
+    box-sizing: border-box;
+
+    box-shadow:
+        0 6px 22px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+.builder-header {
+    margin-bottom: 24px;
+
+    padding-bottom: 20px;
+
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.builder-header h1 {
+    margin: 0;
+
+    font-size: 28px;
+
+    font-weight: 750;
+
+    letter-spacing: -0.6px;
+
+    color: #111827;
+}
+
+.builder-header p {
+    margin: 7px 0 0;
+
+    color: #6b7280;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================
+   CUSTOMIZATION
+========================================= */
+
+.customization-section {
+    background: #f8fafc;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    padding: 18px;
+
+    margin-bottom: 20px;
+}
+
+.customization-section h2 {
+    margin: 0 0 16px;
+
+    font-size: 16px;
+
+    color: #111827;
+}
+
+.customization-section label {
+    display: block;
+
+    margin: 13px 0 6px;
+
+    font-size: 12px;
+
+    font-weight: 650;
+
+    color: #4b5563;
+}
+
+.customization-section select {
+    width: 100%;
+
+    height: 42px;
+
+    padding: 0 12px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #111827;
+
+    font-size: 13px;
+
+    outline: none;
+}
+
+.customization-section select:focus {
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 3px rgba(37,
+            99,
+            235,
+            0.10);
+}
+
+.customization-section input[type="color"] {
+    width: 100%;
+
+    height: 42px;
+
+    padding: 3px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    cursor: pointer;
+}
+
+
+/* =========================================
+   FORM SECTION
+========================================= */
+
+.form-section {
+    margin-bottom: 20px;
+
+    padding: 18px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    background: #ffffff;
+}
+
+.form-section h2 {
+    margin: 0 0 15px;
+
+    font-size: 16px;
+
+    color: #111827;
+
+    font-weight: 700;
+}
+
+.form-section input,
+.form-section textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 8px;
+
+    padding: 11px 12px;
+
+    margin-bottom: 11px;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    color: #111827;
+
+    background: #ffffff;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.form-section input {
+    height: 42px;
+}
+
+.form-section textarea {
+    min-height: 105px;
+
+    resize: vertical;
+
+    line-height: 1.5;
+}
+
+.form-section input::placeholder,
+.form-section textarea::placeholder {
+    color: #9ca3af;
+}
+
+.form-section input:focus,
+.form-section textarea:focus {
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.09);
+}
+
+
+/* =========================================
+   TWO COLUMN
+========================================= */
+
+.two-column {
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 10px;
+}
+
+
+/* =========================================
+   PROFILE PHOTO
+========================================= */
+
+.form-section label {
+    display: block;
+
+    margin: 5px 0 7px;
+
+    font-size: 12px;
+
+    font-weight: 650;
+
+    color: #4b5563;
+}
+
+.form-section input[type="file"] {
+    height: auto;
+
+    padding: 9px;
+
+    cursor: pointer;
+
+    background: #f9fafb;
+}
+
+
+/* =========================================
+   SAVE BUTTON
+========================================= */
+
+.save-btn {
+    width: 100%;
+
+    border: none;
+
+    border-radius: 9px;
+
+    padding: 13px 18px;
+
+    background: #2563eb;
+
+    color: #ffffff;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+
+    box-shadow:
+        0 5px 14px rgba(37, 99, 235, 0.18);
+}
+
+.save-btn:hover {
+    background: #1d4ed8;
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================
+   PREVIEW PANEL
+========================================= */
+
+.preview-panel {
+    min-width: 0;
+
+    background: #eef1f5;
+
+    border: 1px solid #e1e5ea;
+
+    border-radius: 16px;
+
+    padding: 22px;
+
+    box-sizing: border-box;
+
+    overflow: auto;
+
+    min-height: calc(100vh - 56px);
+
+    position: sticky;
+
+    top: 28px;
+
+    max-height: calc(100vh - 56px);
+}
+
+
+/* =========================================
+   PREVIEW HEADER
+========================================= */
+
+.preview-header {
+    max-width: 210mm;
+
+    margin: 0 auto 18px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+}
+
+.preview-header h2 {
+    margin: 0;
+
+    font-size: 16px;
+
+    color: #111827;
+}
+
+.preview-header span {
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    background: #ecfdf5;
+
+    color: #047857;
+
+    font-size: 11px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================
+   A4 RESUME PAPER
+========================================= */
+
+.resume-paper {
+    width: 210mm;
+
+    min-height: 297mm;
+
+    margin: 0 auto;
+
+    padding: 18mm;
+
+    box-sizing: border-box;
+
+    background: #ffffff;
+
+    color: #1f2937;
+
+    box-shadow:
+        0 12px 35px rgba(15, 23, 42, 0.13);
+
+    position: relative;
+}
+
+
+/* =========================================
+   RESUME HEADER
+========================================= */
+
+.resume-header {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 20px;
+
+    padding-bottom: 15px;
+
+    border-bottom: 3px solid var(--accent-color, #2563eb);
+}
+
+.resume-header>div {
+    flex: 1;
+}
+
+.resume-header h1 {
+    margin: 0 0 7px;
+
+    font-size: 30px;
+
+    line-height: 1.15;
+
+    color: #111827;
+}
+
+.contact-info {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 5px 14px;
+
+    font-size: 9.5pt;
+
+    color: #4b5563;
+}
+
+.contact-info span {
+    word-break: break-word;
+}
+
+.resume-photo {
+    width: 82px;
+
+    height: 82px;
+
+    object-fit: cover;
+
+    border-radius: 50%;
+
+    border: 3px solid var(--accent-color, #2563eb);
+}
+
+
+/* =========================================
+   RESUME SECTIONS
+========================================= */
+
+.resume-section {
+    margin-top: 17px;
+
+    page-break-inside: avoid;
+}
+
+.resume-section h3 {
+    margin: 0 0 5px;
+
+    font-size: 12.5pt;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.6px;
+
+    color: var(--accent-color,
+            #2563eb);
+}
+
+.resume-section p {
+    margin: 0;
+
+    font-size: 10pt;
+
+    line-height: 1.55;
+
+    color: #374151;
+
+    white-space: pre-line;
+
+    word-break: break-word;
+}
+
+
+/* =========================================
+   CLASSIC
+========================================= */
+
+.resume-paper.classic .resume-header {
+    border-bottom-width: 3px;
+}
+
+
+/* =========================================
+   MODERN
+========================================= */
+
+.resume-paper.modern .resume-header {
+    border-bottom-width: 4px;
+}
+
+.resume-paper.modern .resume-header h1 {
+    font-size: 33px;
+}
+
+.resume-paper.modern .resume-section h3 {
+    font-size: 12px;
+}
+
+
+/* =========================================
+   MINIMAL
+========================================= */
+
+.resume-paper.minimal .resume-header {
+    border-bottom: 1px solid #d1d5db;
+}
+
+.resume-paper.minimal .resume-section h3 {
+    color: #111827;
+}
+
+
+/* =========================================
+   SCROLLBAR
+========================================= */
+
+.preview-panel::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.preview-panel::-webkit-scrollbar-track {
+    background: #e5e7eb;
+}
+
+.preview-panel::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+
+    border-radius: 10px;
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1250px) {
+
+    .resume-builder {
+        grid-template-columns:
+            430px 1fr;
+    }
+
+    .builder-panel {
+        max-width: 430px;
+    }
+}
+
+
+@media (max-width: 1000px) {
+
+    .resume-builder {
+        grid-template-columns: 1fr;
+
+        padding: 20px;
+    }
+
+    .builder-panel {
+        max-width: none;
+    }
+
+    .preview-panel {
+        position: static;
+
+        max-height: none;
+
+        min-height: auto;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .resume-builder {
+        padding: 12px;
+    }
+
+    .builder-panel {
+        padding: 16px;
+    }
+
+    .two-column {
+        grid-template-columns: 1fr;
+    }
+
+    .preview-panel {
+        padding: 12px;
+    }
+
+    .preview-header {
+        margin-bottom: 12px;
+    }
+}
+
+/* ==========================================
+   SECTION ORDER CUSTOMIZATION
+========================================== */
+
+.section-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.section-order-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.section-order-number {
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.section-order-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.section-order-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.section-order-buttons button {
+    width: 32px;
+    height: 30px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.section-order-buttons button:hover:not(:disabled) {
+    background: #f3f4f6;
+}
+
+.section-order-buttons button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* ==========================================
+   PREMIUM RESUME CUSTOMIZATION
+========================================== */
+
+.customization-header {
+    margin-bottom: 22px;
+}
+
+.customization-header h2 {
+    margin: 0 0 5px;
+    font-size: 20px;
+    color: #111827;
+}
+
+.customization-header p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.customization-group {
+    margin-bottom: 24px;
+}
+
+.customization-label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+}
+
+/* ==========================================
+   TEMPLATE CARDS
+========================================== */
+
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.template-card {
+    position: relative;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    text-align: left;
+    transition: 0.2s ease;
+}
+
+.template-card:hover {
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+}
+
+.template-card.active {
+    border: 2px solid #2563eb;
+    background: #eff6ff;
+}
+
+.template-preview {
+    height: 85px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+}
+
+.template-line {
+    height: 4px;
+    width: 75%;
+    background: #d1d5db;
+    margin-bottom: 7px;
+    border-radius: 2px;
+}
+
+.template-line.large {
+    width: 90%;
+    height: 7px;
+    background: #374151;
+}
+
+.template-line.short {
+    width: 50%;
+}
+
+.classic-preview {
+    border-top: 4px solid #2563eb;
+}
+
+.modern-preview {
+    border-left: 5px solid #2563eb;
+}
+
+.minimal-preview {
+    border-top: 1px solid #d1d5db;
+}
+
+.template-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.template-info strong {
+    font-size: 13px;
+    color: #111827;
+}
+
+.template-info span {
+    font-size: 10px;
+    color: #6b7280;
+}
+
+.template-check {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2563eb;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ==========================================
+   COLOR
+========================================== */
+
+.color-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.color-picker {
+    width: 45px;
+    height: 38px;
+    padding: 2px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.color-picker-row div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.color-picker-row strong {
+    font-size: 13px;
+    color: #111827;
+}
+
+.color-picker-row span {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.color-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.color-preset {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #ffffff;
+    outline: 1px solid #d1d5db;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.color-preset.active {
+    outline: 2px solid #111827;
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   FONT
+========================================== */
+
+.customization-select {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.font-preview {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    font-size: 17px;
+    color: #111827;
+}
+
+/* ==========================================
+   MOBILE
+========================================== */
+
+@media (max-width: 700px) {
+    .template-grid {
+        grid-template-columns: 1fr;
+    }
+}
