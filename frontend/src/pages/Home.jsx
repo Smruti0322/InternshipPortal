@@ -83,7 +83,7 @@ function Home() {
                             </h2>
 
                             <small>
-                                {t("buildCareer")}
+                                {t("home.buildCareer")}
                             </small>
                         </div>
                     </Link>
@@ -92,7 +92,7 @@ function Home() {
                         className={`menu-toggle ${menuOpen ? "menu-open" : ""
                             }`}
                         onClick={() => setMenuOpen(!menuOpen)}
-                        aria-label="Toggle navigation"
+                        aria-label={t("common.toggleNavigation")}
                     >
                         {menuOpen ? "×" : "☰"}
                     </button>
@@ -102,40 +102,47 @@ function Home() {
                             }`}
                     >
 
+
                         <nav className="nav-links">
-
-                            <a
-                                href="#home"
-                                onClick={closeMenu}
-                                className="nav-link active-link"
-                            >
-                                {t("home")}
-                            </a>
-
-                            <a
-                                href="#internships"
+                            <Link
+                                to="/"
                                 onClick={closeMenu}
                                 className="nav-link"
                             >
-                                {t("internships")}
-                            </a>
+                                {t("common.home")}
+                            </Link>
 
-                            <a
-                                href="#jobs"
+                            <Link
+                                to="/internships"
                                 onClick={closeMenu}
                                 className="nav-link"
                             >
-                                {t("jobs")}
-                            </a>
+                                {t("common.internships")}
+                            </Link>
 
-                            <a
-                                href="#profile"
+                            <Link
+                                to="/subscriptions"
                                 onClick={closeMenu}
                                 className="nav-link"
                             >
-                                {t("profile")}
-                            </a>
+                                Subscriptions
+                            </Link>
 
+                            <Link
+                                to="/community"
+                                onClick={closeMenu}
+                                className="nav-link"
+                            >
+                                {t("common.community")}
+                            </Link>
+
+                            <Link
+                                to="/profile"
+                                onClick={closeMenu}
+                                className="nav-link"
+                            >
+                                {t("common.profile")}
+                            </Link>
                         </nav>
 
                         <div className="navbar-actions">
@@ -151,7 +158,7 @@ function Home() {
                                         className="login-btn"
                                         onClick={closeMenu}
                                     >
-                                        {t("login")}
+                                        {t("common.login")}
                                     </Link>
 
                                     <Link
@@ -159,7 +166,7 @@ function Home() {
                                         className="register-btn"
                                         onClick={closeMenu}
                                     >
-                                        {t("register")}
+                                        {t("common.register")}
                                     </Link>
 
                                 </div>
@@ -222,8 +229,9 @@ function Home() {
                                                 }}
                                             >
                                                 <span>👤</span>
+
                                                 <span>
-                                                    {t("profile")}
+                                                    {t("common.profile")}
                                                 </span>
                                             </Link>
 
@@ -232,8 +240,9 @@ function Home() {
                                                 onClick={handleLogout}
                                             >
                                                 <span>↪</span>
+
                                                 <span>
-                                                    {t("logout")}
+                                                    {t("common.logout")}
                                                 </span>
                                             </button>
 
@@ -269,49 +278,58 @@ function Home() {
 
                                 <span className="badge-dot"></span>
 
-                                🚀 {t("startCareer")}
+                                🚀 {t("home.startCareer")}
 
                             </div>
 
 
                             <h1>
 
-                                {t("findYour")}
+                                {t("home.findYour")}
 
                                 <span>
                                     {" "}
-                                    {t("dreamInternship")}
+                                    {t("home.dreamInternship")}
                                     {" "}
                                 </span>
 
-                                {t("andJob")}
+                                {t("home.andJob")}
 
                             </h1>
 
 
                             <p>
-                                {t("heroDescription")}
+                                {t("home.heroDescription")}
                             </p>
 
 
                             <div className="hero-buttons">
 
-                                <button className="primary-btn">
 
-                                    {t("exploreInternships")}
-
-                                    <span>
-                                        →
-                                    </span>
-
-                                </button>
+                                <Link
+                                    to="/internships"
+                                    className="primary-btn"
+                                    onClick={closeMenu}
+                                >
+                                    {t("home.exploreInternships")}
+                                    <span>→</span>
+                                </Link>
 
 
                                 <button className="secondary-btn">
 
-                                    {t("findJobs")}
+                                    {t("home.findJobs")}
 
                                 </button>
+
+
+                                <Link
+                                    to="/resume-builder"
+                                    className="resume-cta-button"
+                                    onClick={closeMenu}
+                                >
+                                    📄 {t("home.buildResume")} →
+                                </Link>
 
                             </div>
 
@@ -325,7 +343,7 @@ function Home() {
                                     </strong>
 
                                     <span>
-                                        {t("opportunities")}
+                                        {t("home.opportunities")}
                                     </span>
 
                                 </div>
@@ -341,7 +359,7 @@ function Home() {
                                     </strong>
 
                                     <span>
-                                        {t("students")}
+                                        {t("home.students")}
                                     </span>
 
                                 </div>
@@ -357,7 +375,7 @@ function Home() {
                                     </strong>
 
                                     <span>
-                                        {t("companies")}
+                                        {t("home.companies")}
                                     </span>
 
                                 </div>
@@ -378,13 +396,13 @@ function Home() {
                                     <span className="status-dot"></span>
 
                                     <span>
-                                        {t("latestOpportunities")}
+                                        {t("home.latestOpportunities")}
                                     </span>
 
                                 </div>
 
                                 <span className="live-badge">
-                                    {t("live")}
+                                    {t("home.live")}
                                 </span>
 
                             </div>
@@ -399,11 +417,11 @@ function Home() {
                                 <div className="opportunity-info">
 
                                     <h4>
-                                        {t("reactDeveloperIntern")}
+                                        {t("home.reactDeveloperIntern")}
                                     </h4>
 
                                     <p>
-                                        {t("remote")} · ₹10,000/month
+                                        {t("home.remote")} · ₹10,000/month
                                     </p>
 
                                 </div>
@@ -424,11 +442,11 @@ function Home() {
                                 <div className="opportunity-info">
 
                                     <h4>
-                                        {t("mernDeveloper")}
+                                        {t("home.mernDeveloper")}
                                     </h4>
 
                                     <p>
-                                        {t("hybrid")} · ₹15,000/month
+                                        {t("home.hybrid")} · ₹15,000/month
                                     </p>
 
                                 </div>
@@ -449,11 +467,11 @@ function Home() {
                                 <div className="opportunity-info">
 
                                     <h4>
-                                        {t("frontendDeveloper")}
+                                        {t("home.frontendDeveloper")}
                                     </h4>
 
                                     <p>
-                                        {t("remote")} · ₹12,000/month
+                                        {t("home.remote")} · ₹12,000/month
                                     </p>
 
                                 </div>
@@ -465,13 +483,14 @@ function Home() {
                             </div>
 
 
-                            <button className="view-all-btn">
 
-                                {t("viewAllOpportunities")}
-
-                                {" →"}
-
-                            </button>
+                            <Link
+                                to="/internships"
+                                className="view-all-btn"
+                                onClick={closeMenu}
+                            >
+                                {t("home.viewAllOpportunities")} →
+                            </Link>
 
                         </div>
 
@@ -487,22 +506,22 @@ function Home() {
                     <div className="section-heading">
 
                         <span>
-                            {t("whyInternshipPortal")}
+                            {t("home.whyInternshipPortal")}
                         </span>
 
                         <h2>
 
-                            {t("everythingYouNeed")}
+                            {t("home.everythingYouNeed")}
 
                             <strong>
                                 {" "}
-                                {t("growYourCareer")}
+                                {t("home.growYourCareer")}
                             </strong>
 
                         </h2>
 
                         <p>
-                            {t("careerDescription")}
+                            {t("home.careerDescription")}
                         </p>
 
                     </div>
@@ -517,15 +536,15 @@ function Home() {
                             </div>
 
                             <h3>
-                                {t("verifiedOpportunities")}
+                                {t("home.verifiedOpportunities")}
                             </h3>
 
                             <p>
-                                {t("verifiedDescription")}
+                                {t("home.verifiedDescription")}
                             </p>
 
                             <a href="#internships">
-                                {t("exploreOpportunities")} →
+                                {t("home.exploreOpportunities")} →
                             </a>
 
                         </div>
@@ -538,16 +557,20 @@ function Home() {
                             </div>
 
                             <h3>
-                                {t("buildResume")}
+                                {t("home.buildResume")}
                             </h3>
 
                             <p>
-                                {t("resumeDescription")}
+                                {t("home.resumeDescription")}
                             </p>
 
-                            <a href="#profile">
-                                {t("buildYourProfile")} →
-                            </a>
+                            <Link
+                                to="/resume-builder"
+                                className="resume-builder-link"
+                                onClick={closeMenu}
+                            >
+                                {t("home.buildYourProfile")} →
+                            </Link>
 
                         </div>
 
@@ -559,15 +582,15 @@ function Home() {
                             </div>
 
                             <h3>
-                                {t("growCareer")}
+                                {t("home.growCareer")}
                             </h3>
 
                             <p>
-                                {t("growDescription")}
+                                {t("home.growDescription")}
                             </p>
 
                             <a href="#jobs">
-                                {t("findYourOpportunity")} →
+                                {t("home.findYourOpportunity")} →
                             </a>
 
                         </div>
@@ -598,7 +621,7 @@ function Home() {
                             </strong>
 
                             <p>
-                                {t("connectingTalent")}
+                                {t("home.connectingTalent")}
                             </p>
 
                         </div>
@@ -609,7 +632,7 @@ function Home() {
                     <div className="footer-copy">
 
                         © 2026 InternshipPortal.{" "}
-                        {t("allRightsReserved")}
+                        {t("common.allRightsReserved")}
 
                     </div>
 

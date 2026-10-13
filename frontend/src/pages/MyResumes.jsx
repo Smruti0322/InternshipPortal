@@ -1,48 +1,97 @@
 import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
+
+import { useToast } from "../context/ToastContext";
+
+import { useTranslation } from "react-i18next";
+
 import "./MyResumes.css";
+
+const isPersistentImageData = (value) =>
+    typeof value === "string" &&
+    /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/]+={0,2}$/i.test(
+        value
+    );
 
 function MyResumes() {
     const navigate = useNavigate();
 
+    const { showToast } = useToast();
+
+    const { t, i18n } = useTranslation();
+
     const [resumes, setResumes] = useState([]);
+
     const [loading, setLoading] = useState(true);
+
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        fetchResumes();
-    }, []);
+    const authHeaders = {
+        Authorization: `Bearer ${ localStorage.getItem("token") || "" } `,
+    };
 
     const fetchResumes = async () => {
         try {
             setLoading(true);
+            setError("");
+
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                throw new Error(
+                    t("common.pleaseLoginAgain")
+                );
+            }
 
             const response = await fetch(
-                "http://localhost:5000/api/resumes/user/1"
+                "http://localhost:5000/api/resumes",
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${ token } `,
+                    },
+                }
             );
 
             const data = await response.json();
 
+            console.log(
+                "My Resumes API Response:",
+                data
+            );
+
             if (!response.ok) {
                 throw new Error(
-                    data.message || "Failed to load resumes"
+                    data.message ||
+                        t("myResumes.failedLoadResumes")
                 );
             }
 
-            setResumes(data);
-            setError("");
-
+            setResumes(
+                Array.isArray(data) ? data : []
+            );
         } catch (error) {
-            console.error("Fetch Resumes Error:", error);
+            console.error(
+                "Fetch Resumes Error:",
+                error
+            );
+
             setError(error.message);
+
+            setResumes([]);
         } finally {
             setLoading(false);
         }
     };
 
+    useEffect(() => {
+        fetchResumes();
+    }, []);
+
     const handleDelete = async (id) => {
         const confirmed = window.confirm(
-            "Are you sure you want to delete this resume?"
+            t("myResumes.confirmDeleteResume")
         );
 
         if (!confirmed) {
@@ -52,416 +101,523 @@ function MyResumes() {
         try {
             const response = await fetch(
                 `http://localhost:5000/api/resumes/${id}`,
-                {
-                    method: "DELETE",
+{
+    method: "DELETE",
+        headers: authHeaders,
                 }
             );
 
-            const data = await response.json();
+const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(
-                    data.message || "Failed to delete resume"
-                );
-            }
+if (!response.ok) {
+    throw new Error(
+        data.message ||
+        t("myResumes.failedDeleteResume")
+    );
+}
 
-            setResumes((previous) =>
-                previous.filter(
-                    (resume) => resume.id !== id
-                )
-            );
+setResumes((previous) =>
+    previous.filter(
+        (resume) => resume.id !== id
+    )
+);
 
+showToast(
+    t("myResumes.resumeDeletedSuccessfully"),
+    "success"
+);
         } catch (error) {
-            console.error("Delete Resume Error:", error);
+    console.error(
+        "Delete Resume Error:",
+        error
+    );
 
-            alert(
-                "Failed to delete resume: " +
-                error.message
-            );
-        }
+    showToast(
+        t("myResumes.unableDeleteResume"),
+        "error"
+    );
+}
     };
 
-    const handleSetDefault = async (id) => {
-        try {
-            const response = await fetch(
-                `http://localhost:5000/api/resumes/${id}/default`,
-                {
-                    method: "PUT",
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message ||
-                    "Failed to set default resume"
-                );
-            }
-
-            await fetchResumes();
-
-        } catch (error) {
-            console.error(
-                "Set Default Error:",
-                error
-            );
-
-            alert(
-                "Failed to set default resume: " +
-                error.message
-            );
-        }
-    };
-
-    const formatDate = (date) => {
-        if (!date) return "Recently";
-
-        return new Date(date).toLocaleDateString(
-            "en-IN",
+const handleSetDefault = async (id) => {
+    try {
+        const response = await fetch(
+            `http://localhost:5000/api/resumes/${id}/default`,
             {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
+                method: "PUT",
+                headers: authHeaders,
             }
         );
-    };
 
-    if (loading) {
-        return (
-            <div className="my-resumes-page">
-                <div className="resume-loading">
-                    <div className="resume-loader"></div>
-                    <h2>Loading your resumes...</h2>
-                    <p>Please wait a moment.</p>
-                </div>
-            </div>
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                t("myResumes.failedSetDefaultResume")
+            );
+        }
+
+        await fetchResumes();
+
+        showToast(
+            t("myResumes.defaultResumeUpdated"),
+            "success"
+        );
+    } catch (error) {
+        console.error(
+            "Set Default Error:",
+            error
+        );
+
+        showToast(
+            t("myResumes.unableUpdateDefaultResume"),
+            "error"
         );
     }
+};
 
+const formatDate = (date) => {
+    if (!date) {
+        return t("common.recently");
+    }
+
+    const language =
+        i18n.resolvedLanguage || "en";
+
+    const localeMap = {
+        en: "en-IN",
+        hi: "hi-IN",
+        es: "es-ES",
+        fr: "fr-FR",
+        pt: "pt-BR",
+        zh: "zh-CN",
+    };
+
+    return new Date(date).toLocaleDateString(
+        localeMap[language] || "en-IN",
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }
+    );
+};
+
+if (loading) {
     return (
         <div className="my-resumes-page">
+            <div className="resume-loading">
+                <div className="resume-loader"></div>
 
-            {/* HEADER */}
+                <h2>
+                    {t(
+                        "myResumes.loadingYourResumes"
+                    )}
+                </h2>
 
-            <div className="my-resumes-header">
+                <p>
+                    {t(
+                        "myResumes.pleaseWaitMoment"
+                    )}
+                </p>
+            </div>
+        </div>
+    );
+}
 
-                <div>
-                    <div className="page-badge">
-                        Resume Builder
-                    </div>
+return (
+    <div className="my-resumes-page">
 
-                    <h1>My Resumes</h1>
+        {/* HEADER */}
 
-                    <p>
-                        Create, manage and customize
-                        your professional resumes.
-                    </p>
+        <div className="my-resumes-header">
+            <div>
+                <button
+                    type="button"
+                    className="back-home-btn"
+                    onClick={() => navigate("/")}
+                >
+                    ←{" "}
+                    {t("myResumes.backToHome")}
+                </button>
+
+                <div className="page-badge">
+                    {t("resumeBuilder.title")}
                 </div>
 
+                <h1>
+                    {t("myResumes.myResumes")}
+                </h1>
+
+                <p>
+                    {t(
+                        "myResumes.manageResumesDescription"
+                    )}
+                </p>
+            </div>
+
+            <button
+                className="create-resume-btn"
+                onClick={() =>
+                    navigate("/resume-builder")
+                }
+            >
+                <span>+</span>
+
+                {t(
+                    "myResumes.createNewResume"
+                )}
+            </button>
+        </div>
+
+        {/* STATS */}
+
+        <div className="resume-stats">
+
+            <div className="stat-card">
+                <div className="stat-icon blue">
+                    📄
+                </div>
+
+                <div>
+                    <span>
+                        {t(
+                            "myResumes.totalResumes"
+                        )}
+                    </span>
+
+                    <strong>
+                        {resumes.length}
+                    </strong>
+                </div>
+            </div>
+
+            <div className="stat-card">
+                <div className="stat-icon green">
+                    ✓
+                </div>
+
+                <div>
+                    <span>
+                        {t(
+                            "myResumes.defaultResume"
+                        )}
+                    </span>
+
+                    <strong>
+                        {
+                            resumes.filter(
+                                (resume) =>
+                                    resume.is_default
+                            ).length
+                        }
+                    </strong>
+                </div>
+            </div>
+
+            <div className="stat-card">
+                <div className="stat-icon purple">
+                    ✨
+                </div>
+
+                <div>
+                    <span>
+                        {t(
+                            "myResumes.templates"
+                        )}
+                    </span>
+
+                    <strong>3</strong>
+                </div>
+            </div>
+
+        </div>
+
+        {/* ERROR */}
+
+        {error && (
+            <div className="resume-error">
+                <strong>
+                    {t(
+                        "common.somethingWentWrong"
+                    )}
+                </strong>
+
+                <span>{error}</span>
+
+                <button onClick={fetchResumes}>
+                    {t("myResumes.tryAgain")}
+                </button>
+            </div>
+        )}
+
+        {/* EMPTY STATE */}
+
+        {!error && resumes.length === 0 && (
+            <div className="empty-resumes">
+
+                <div className="empty-icon">
+                    📄
+                </div>
+
+                <h2>
+                    {t(
+                        "myResumes.noResumesYet"
+                    )}
+                </h2>
+
+                <p>
+                    {t(
+                        "myResumes.createFirstResumeDescription"
+                    )}
+                </p>
+
                 <button
-                    className="create-resume-btn"
                     onClick={() =>
                         navigate("/resume-builder")
                     }
+                    className="create-empty-btn"
                 >
-                    <span>+</span>
-                    Create New Resume
+                    {t(
+                        "myResumes.createFirstResume"
+                    )}
                 </button>
 
             </div>
+        )}
 
+        {/* RESUME GRID */}
 
-            {/* STATS */}
+        {!error && resumes.length > 0 && (
+            <div className="resumes-grid">
 
-            <div className="resume-stats">
+                {resumes.map((resume) => (
 
-                <div className="stat-card">
-
-                    <div className="stat-icon blue">
-                        📄
-                    </div>
-
-                    <div>
-                        <span>Total Resumes</span>
-                        <strong>
-                            {resumes.length}
-                        </strong>
-                    </div>
-
-                </div>
-
-
-                <div className="stat-card">
-
-                    <div className="stat-icon green">
-                        ✓
-                    </div>
-
-                    <div>
-                        <span>Default Resume</span>
-
-                        <strong>
-                            {
-                                resumes.filter(
-                                    (resume) =>
-                                        resume.is_default
-                                ).length
-                            }
-                        </strong>
-                    </div>
-
-                </div>
-
-
-                <div className="stat-card">
-
-                    <div className="stat-icon purple">
-                        ✨
-                    </div>
-
-                    <div>
-                        <span>Templates</span>
-
-                        <strong>3</strong>
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            {/* ERROR */}
-
-            {error && (
-                <div className="resume-error">
-                    <strong>Something went wrong</strong>
-                    <span>{error}</span>
-
-                    <button
-                        onClick={fetchResumes}
+                    <div
+                        className="resume-card"
+                        key={resume.id}
                     >
-                        Try Again
-                    </button>
-                </div>
-            )}
 
+                        {/* CARD TOP */}
 
-            {/* EMPTY STATE */}
+                        <div className="resume-card-top">
 
-            {!error && resumes.length === 0 && (
-                <div className="empty-resumes">
+                            <div
+                                className="resume-mini-preview"
+                                style={{
+                                    "--resume-accent":
+                                        resume.accent_color ||
+                                        "#2563eb",
+                                }}
+                            >
 
-                    <div className="empty-icon">
-                        📄
-                    </div>
+                                <div className="mini-header">
 
-                    <h2>
-                        No resumes yet
-                    </h2>
-
-                    <p>
-                        Create your first professional
-                        resume and start applying for
-                        opportunities.
-                    </p>
-
-                    <button
-                        onClick={() =>
-                            navigate("/resume-builder")
-                        }
-                        className="create-empty-btn"
-                    >
-                        Create Your First Resume
-                    </button>
-
-                </div>
-            )}
-
-
-            {/* RESUME GRID */}
-
-            {!error && resumes.length > 0 && (
-                <div className="resumes-grid">
-
-                    {resumes.map((resume) => (
-
-                        <div
-                            className="resume-card"
-                            key={resume.id}
-                        >
-
-                            {/* CARD TOP */}
-
-                            <div className="resume-card-top">
-
-                                <div
-                                    className="resume-mini-preview"
-                                    style={{
-                                        "--resume-accent":
-                                            resume.accent_color ||
-                                            "#2563eb",
-                                    }}
-                                >
-
-                                    <div className="mini-header">
-
-                                        {resume.profile_photo ? (
+                                    {isPersistentImageData(
+                                        resume.profile_photo
+                                    ) ? (
+                                        <>
                                             <img
                                                 src={
                                                     resume.profile_photo
                                                 }
                                                 alt=""
+                                                onError={(
+                                                    event
+                                                ) => {
+                                                    event.currentTarget.style.display =
+                                                        "none";
+
+                                                    event.currentTarget.nextElementSibling.style.display =
+                                                        "flex";
+                                                }}
                                             />
-                                        ) : (
-                                            <div className="mini-avatar">
+
+                                            <div
+                                                className="mini-avatar"
+                                                style={{
+                                                    display:
+                                                        "none",
+                                                }}
+                                            >
                                                 {resume.full_name
                                                     ?.charAt(0)
                                                     ?.toUpperCase() ||
                                                     "R"}
                                             </div>
-                                        )}
+                                        </>
+                                    ) : (
+                                        <div className="mini-avatar">
+                                            {resume.full_name
+                                                ?.charAt(0)
+                                                ?.toUpperCase() ||
+                                                "R"}
+                                        </div>
+                                    )}
 
-                                        <div>
-                                            <div className="mini-name">
-                                                {resume.full_name ||
-                                                    "Your Name"}
-                                            </div>
+                                    <div>
 
-                                            <div className="mini-contact">
-                                                {resume.email ||
-                                                    "Email"}
-                                            </div>
+                                        <div className="mini-name">
+                                            {resume.full_name ||
+                                                t(
+                                                    "resumeBuilder.yourName"
+                                                )}
+                                        </div>
+
+                                        <div className="mini-contact">
+                                            {resume.email ||
+                                                t(
+                                                    "common.email"
+                                                )}
                                         </div>
 
                                     </div>
 
-                                    <div className="mini-line"></div>
-
-                                    <div className="mini-section">
-                                        <span></span>
-                                        <span></span>
-                                        <span></span>
-                                    </div>
-
-                                    <div className="mini-section">
-                                        <span></span>
-                                        <span></span>
-                                        <span></span>
-                                    </div>
-
-                                    <div className="mini-section">
-                                        <span></span>
-                                        <span></span>
-                                    </div>
-
                                 </div>
 
-                                {resume.is_default ? (
-                                    <div className="default-badge">
-                                        ✓ Default
-                                    </div>
-                                ) : null}
+                                <div className="mini-line"></div>
+
+                                <div className="mini-section">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+
+                                <div className="mini-section">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+
+                                <div className="mini-section">
+                                    <span></span>
+                                    <span></span>
+                                </div>
 
                             </div>
 
+                            {resume.is_default ? (
+                                <div className="default-badge">
+                                    ✓{" "}
+                                    {t(
+                                        "myResumes.default"
+                                    )}
+                                </div>
+                            ) : null}
 
-                            {/* CARD CONTENT */}
+                        </div>
 
-                            <div className="resume-card-content">
+                        {/* CARD CONTENT */}
 
-                                <div className="resume-title-row">
+                        <div className="resume-card-content">
 
-                                    <div>
-                                        <h3>
-                                            {
-                                                resume.resume_name ||
-                                                "Untitled Resume"
-                                            }
-                                        </h3>
+                            <div className="resume-title-row">
 
-                                        <p>
-                                            Updated{" "}
-                                            {formatDate(
-                                                resume.updated_at ||
-                                                resume.created_at
-                                            )}
-                                        </p>
-                                    </div>
+                                <div>
 
-                                    <span className="template-tag">
+                                    <h3>
                                         {
-                                            resume.template ||
-                                            "classic"
+                                            resume.resume_name ||
+                                            t(
+                                                "myResumes.untitledResume"
+                                            )
                                         }
-                                    </span>
+                                    </h3>
+
+                                    <p>
+                                        {t(
+                                            "myResumes.updated"
+                                        )}{" "}
+
+                                        {formatDate(
+                                            resume.updated_at ||
+                                            resume.created_at
+                                        )}
+                                    </p>
 
                                 </div>
 
+                                <span className="template-tag">
+                                    {resume.template ||
+                                        t(
+                                            "resumeBuilder.classic"
+                                        )}
+                                </span>
 
-                                {/* ACTIONS */}
+                            </div>
 
-                                <div className="resume-actions">
+                            {/* ACTIONS */}
 
-                                    <button
-                                        className="view-btn"
-                                        onClick={() =>
-                                            navigate(
-                                                `/view-resume/${resume.id}`
-                                            )
-                                        }
-                                    >
-                                        View
-                                    </button>
+                            <div className="resume-actions">
 
-                                    <button
-                                        className="edit-btn"
-                                        onClick={() =>
-                                            navigate(
-                                                `/resume-builder?id=${resume.id}`
-                                            )
-                                        }
-                                    >
-                                        Edit
-                                    </button>
-
-                                    {!resume.is_default && (
-                                        <button
-                                            className="default-btn"
-                                            onClick={() =>
-                                                handleSetDefault(
-                                                    resume.id
-                                                )
-                                            }
-                                        >
-                                            Set Default
-                                        </button>
+                                <button
+                                    className="view-btn"
+                                    onClick={() =>
+                                        navigate(
+                                            `/view-resume/${resume.id}`
+                                        )
+                                    }
+                                >
+                                    {t(
+                                        "myResumes.view"
                                     )}
+                                </button>
 
+                                <button
+                                    className="edit-btn"
+                                    onClick={() =>
+                                        navigate(
+                                            `/resume-builder?id=${resume.id}`
+                                        )
+                                    }
+                                >
+                                    {t(
+                                        "myResumes.edit"
+                                    )}
+                                </button>
+
+                                {!resume.is_default && (
                                     <button
-                                        className="delete-btn"
+                                        className="default-btn"
                                         onClick={() =>
-                                            handleDelete(
+                                            handleSetDefault(
                                                 resume.id
                                             )
                                         }
                                     >
-                                        Delete
+                                        {t(
+                                            "myResumes.setDefault"
+                                        )}
                                     </button>
+                                )}
 
-                                </div>
+                                <button
+                                    className="delete-btn"
+                                    onClick={() =>
+                                        handleDelete(
+                                            resume.id
+                                        )
+                                    }
+                                >
+                                    {t(
+                                        "myResumes.delete"
+                                    )}
+                                </button>
 
                             </div>
 
                         </div>
 
-                    ))}
+                    </div>
 
-                </div>
-            )}
+                ))}
 
-        </div>
-    );
+            </div>
+        )}
+
+    </div>
+);
 }
 
 export default MyResumes;

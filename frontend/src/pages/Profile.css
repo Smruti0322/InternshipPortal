@@ -1,0 +1,957 @@
+/* =========================================================
+   PROFILE PAGE
+========================================================= */
+
+.profile-page {
+    min-height: 100vh;
+    background: #f5f7fb;
+    color: #1f2937;
+}
+
+
+/* =========================================================
+   TOP BAR / BACK TO HOME
+========================================================= */
+
+.profile-top-bar {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 24px 0;
+}
+
+.profile-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 10px 18px;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #2563eb;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.profile-back-button:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.profile-content {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 24px 50px;
+}
+
+
+/* =========================================================
+   PROFILE HEADER CARD
+========================================================= */
+
+.profile-header-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 28px 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06);
+}
+
+.profile-large-avatar {
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.profile-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-user-info h1 {
+    margin: 0 0 6px;
+    font-size: 25px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #111827;
+    word-break: break-word;
+}
+
+.profile-user-info p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.profile-header-actions {
+    margin-left: auto;
+}
+
+.profile-page-logout-button {
+    border: none;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #ffffff;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    white-space: nowrap;
+}
+
+.profile-page-logout-button:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.profile-page-logout-button:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   LOGIN HISTORY
+========================================================= */
+
+.login-history-section {
+    margin-top: 28px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 28px 30px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+.login-history-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 22px;
+}
+
+.login-history-heading h2 {
+    margin: 0 0 6px;
+    color: #111827;
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.login-history-heading p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.login-history-loading,
+.login-history-error,
+.login-history-empty {
+    padding: 25px;
+    text-align: center;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.login-history-loading {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.login-history-error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.login-history-empty {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+
+/* =========================================================
+   LOGIN HISTORY TABLE
+========================================================= */
+
+.login-history-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.login-history-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+}
+
+.login-history-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.login-history-table td {
+    padding: 15px 16px;
+    color: #374151;
+    font-size: 13px;
+    border-bottom: 1px solid #eef0f3;
+    vertical-align: middle;
+}
+
+.login-history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.login-history-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   LOGIN STATUS
+========================================================= */
+
+.login-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.login-status.success {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.login-status.failed {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.login-status.default {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
+
+/* =========================================================
+   LOGIN HISTORY MOBILE CARDS
+========================================================= */
+
+.login-history-mobile-list {
+    display: none;
+}
+
+.login-history-mobile-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 13px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.login-history-mobile-card:last-child {
+    margin-bottom: 0;
+}
+
+.mobile-history-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+.mobile-history-row:first-child {
+    padding-top: 0;
+}
+
+.mobile-history-row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.mobile-history-row>span:first-child {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.mobile-history-row strong {
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   ACTIVE SESSIONS
+========================================================= */
+
+.active-sessions-section {
+    margin-top: 28px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 28px 30px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+.active-sessions-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.active-sessions-heading h2 {
+    margin: 0 0 6px;
+    color: #111827;
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.active-sessions-heading p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.sign-out-other-devices-button {
+    border: 1px solid #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+    border-radius: 9px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: 0.2s ease;
+}
+
+.sign-out-other-devices-button:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.sign-out-other-devices-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   ACTIVE SESSION STATES
+========================================================= */
+
+.active-sessions-loading,
+.active-sessions-error,
+.active-sessions-empty,
+.active-sessions-success {
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.active-sessions-loading {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.active-sessions-error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.active-sessions-empty {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.active-sessions-success {
+    margin-bottom: 16px;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+
+/* =========================================================
+   SESSION LIST
+========================================================= */
+
+.active-sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.active-session-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    transition: 0.2s ease;
+}
+
+.active-session-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 5px 15px rgba(15, 23, 42, 0.05);
+}
+
+.active-session-card.current-session {
+    border-color: #bfdbfe;
+    background: #f8fbff;
+}
+
+.active-session-icon {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 12px;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.active-session-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.active-session-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-bottom: 5px;
+}
+
+.active-session-title-row h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.current-session-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.active-session-device {
+    margin: 0 0 13px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.active-session-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px 20px;
+}
+
+.active-session-details span {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.active-session-details strong {
+    color: #374151;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   LOADING PROFILE
+========================================================= */
+
+.profile-loading {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.profile-footer {
+    width: 100%;
+    padding: 20px 24px 28px;
+    text-align: center;
+}
+
+.profile-footer p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+    .profile-content {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .profile-top-bar {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .profile-header-card {
+        padding: 24px;
+    }
+
+    .login-history-section,
+    .active-sessions-section {
+        padding: 24px;
+    }
+
+    .active-session-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+    .profile-top-bar {
+        padding: 16px 16px 0;
+    }
+
+    .profile-back-button {
+        font-size: 14px;
+    }
+
+    .profile-content {
+        padding: 16px 16px 35px;
+    }
+
+    .profile-header-card {
+        padding: 20px;
+        border-radius: 15px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .profile-large-avatar {
+        width: 58px;
+        height: 58px;
+        min-width: 58px;
+        font-size: 23px;
+    }
+
+    .profile-user-info {
+        flex: 1;
+        min-width: calc(100% - 78px);
+    }
+
+    .profile-user-info h1 {
+        font-size: 20px;
+    }
+
+    .profile-user-info p {
+        font-size: 13px;
+    }
+
+    .profile-header-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .profile-page-logout-button {
+        width: 100%;
+        padding: 11px 16px;
+    }
+
+    .login-history-section,
+    .active-sessions-section {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 15px;
+    }
+
+    .login-history-heading h2,
+    .active-sessions-heading h2 {
+        font-size: 19px;
+    }
+
+    .login-history-heading p,
+    .active-sessions-heading p {
+        font-size: 13px;
+    }
+
+    /* Hide desktop table */
+    .login-history-table-wrapper {
+        display: none;
+    }
+
+    /* Show mobile cards */
+    .login-history-mobile-list {
+        display: block;
+    }
+
+    .active-sessions-heading {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .sign-out-other-devices-button {
+        width: 100%;
+    }
+
+    .active-session-card {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .active-session-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        font-size: 19px;
+        border-radius: 10px;
+    }
+
+    .active-session-title-row h3 {
+        font-size: 15px;
+    }
+
+    .active-session-device {
+        font-size: 12px;
+    }
+
+    .active-session-details {
+        grid-template-columns: 1fr;
+        gap: 7px;
+    }
+
+    .active-session-details span {
+        font-size: 12px;
+    }
+
+    .profile-footer {
+        padding: 18px 16px 25px;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+    .profile-top-bar {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .profile-content {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .profile-header-card {
+        padding: 17px;
+    }
+
+    .profile-large-avatar {
+        width: 52px;
+        height: 52px;
+        min-width: 52px;
+        font-size: 21px;
+    }
+
+    .profile-user-info {
+        min-width: calc(100% - 68px);
+    }
+
+    .profile-user-info h1 {
+        font-size: 18px;
+    }
+
+    .login-history-section,
+    .active-sessions-section {
+        padding: 16px;
+    }
+
+    .login-history-mobile-card {
+        padding: 14px;
+    }
+
+    .mobile-history-row {
+        gap: 10px;
+    }
+
+    .mobile-history-row>span:first-child,
+    .mobile-history-row strong {
+        font-size: 12px;
+    }
+
+    .active-session-card {
+        padding: 14px;
+    }
+
+    .active-session-title-row {
+        gap: 6px;
+    }
+
+    .current-session-badge {
+        font-size: 10px;
+    }
+}
+
+/* =========================================================
+   SUBSCRIPTION SECTION
+========================================================= */
+
+.subscription-section {
+    margin-top: 28px;
+    padding: 28px 30px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+.subscription-heading {
+    margin-bottom: 22px;
+}
+
+.subscription-heading h2 {
+    margin: 0 0 6px;
+    color: #111827;
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.subscription-heading p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.subscription-plan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    background: #f8fbff;
+}
+
+.subscription-label {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.subscription-plan-header h3 {
+    margin: 7px 0 0;
+    color: #1d4ed8;
+    font-size: 25px;
+    font-weight: 700;
+}
+
+.subscription-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.subscription-status.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.subscription-status.expired,
+.subscription-status.cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.subscription-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.subscription-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    min-width: 0;
+}
+
+.subscription-detail-item span {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.subscription-detail-item strong {
+    color: #1f2937;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
+
+.subscription-note {
+    margin: 18px 0 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.subscription-message,
+.subscription-error {
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.subscription-message {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.subscription-error {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+    .subscription-section {
+        padding: 24px;
+    }
+
+    .subscription-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .subscription-section {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 15px;
+    }
+
+    .subscription-heading h2 {
+        font-size: 19px;
+    }
+
+    .subscription-heading p {
+        font-size: 13px;
+    }
+
+    .subscription-plan-header {
+        padding: 16px;
+    }
+
+    .subscription-plan-header h3 {
+        font-size: 22px;
+    }
+
+    .subscription-details {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .subscription-section {
+        padding: 16px;
+    }
+
+    .subscription-plan-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .subscription-detail-item {
+        padding: 14px;
+    }
+}

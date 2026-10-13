@@ -1914,3 +1914,32 @@ a {
     flex-wrap: wrap;
   }
 }
+
+.resume-builder-link,
+.resume-cta-button {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.resume-cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #ffffff;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.resume-cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+.resume-builder-link {
+  color: #2563eb;
+  font-weight: 600;
+}

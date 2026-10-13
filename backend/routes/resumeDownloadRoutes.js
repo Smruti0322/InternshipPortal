@@ -3,8 +3,10 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 const db = require("../config/db");
+const authenticateToken = require("../middleware/authMiddleware");
 
 const router = express.Router();
+router.use(authenticateToken);
 
 // =====================================================
 // EMAIL CONFIGURATION
@@ -27,21 +29,18 @@ const transporter = nodemailer.createTransport({
 
 router.post("/request-otp", async (req, res) => {
     try {
-        const {
-            user_id,
-            resume_id,
-            email,
-        } = req.body;
+        const { resume_id } = req.body;
+        const userId = req.user.id;
 
         // ---------------------------------------------
         // VALIDATION
         // ---------------------------------------------
 
-        if (!user_id || !resume_id || !email) {
+        if (!resume_id) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "User ID, resume ID and email are required",
+                    "Resume ID is required",
             });
         }
 
@@ -52,16 +51,17 @@ router.post("/request-otp", async (req, res) => {
         const [resumeRows] = await db.query(
             `
             SELECT
-                id,
-                user_id,
-                full_name,
-                email
+                resumes.id,
+                resumes.user_id,
+                resumes.full_name,
+                u.email AS registered_email
             FROM resumes
-            WHERE id = ?
-            AND user_id = ?
+            JOIN users u ON u.id = resumes.user_id
+            WHERE resumes.id = ?
+            AND resumes.user_id = ?
             LIMIT 1
             `,
-            [resume_id, user_id]
+            [resume_id, userId]
         );
 
         if (resumeRows.length === 0) {
@@ -78,8 +78,7 @@ router.post("/request-otp", async (req, res) => {
         // USE RESUME EMAIL
         // ---------------------------------------------
 
-        const resumeEmail =
-            resume.email || email;
+        const resumeEmail = resume.registered_email;
 
         if (!resumeEmail) {
             return res.status(400).json({
@@ -99,40 +98,34 @@ router.post("/request-otp", async (req, res) => {
                 `
                 SELECT
                     id,
-                    created_at
+                    TIMESTAMPDIFF(SECOND, created_at, UTC_TIMESTAMP()) AS age_seconds,
+                    TIMESTAMPDIFF(SECOND, created_at, expires_at) AS validity_seconds
                 FROM resume_otps
                 WHERE user_id = ?
                 AND resume_id = ?
-                ORDER BY created_at DESC
+                ORDER BY id DESC
                 LIMIT 1
                 `,
-                [user_id, resume_id]
+                [userId, resume_id]
             );
 
         if (recentOtpRows.length > 0) {
-            const createdAt =
-                new Date(
-                    recentOtpRows[0].created_at
+            const recentOtp = recentOtpRows[0];
+            const ageSeconds = Number(recentOtp.age_seconds);
+
+            // Older rows mixed UTC expiry values with MySQL local creation
+            // timestamps. Discard malformed rows before applying the limit.
+            if (Number(recentOtp.validity_seconds) !== 300 || ageSeconds < 0) {
+                await db.query(
+                    "DELETE FROM resume_otps WHERE user_id = ? AND resume_id = ?",
+                    [userId, resume_id]
                 );
-
-            const currentTime =
-                new Date();
-
-            const difference =
-                currentTime.getTime() -
-                createdAt.getTime();
-
-            const secondsPassed =
-                Math.floor(
-                    difference / 1000
-                );
-
-            if (secondsPassed < 60) {
-                const remaining =
-                    60 - secondsPassed;
+            } else if (ageSeconds < 60) {
+                const remaining = 60 - ageSeconds;
 
                 return res.status(429).json({
                     success: false,
+                    retry_after_seconds: remaining,
                     message:
                         `Please wait ${remaining} seconds before requesting another OTP.`,
                 });
@@ -147,20 +140,6 @@ router.post("/request-otp", async (req, res) => {
             .randomInt(100000, 1000000)
             .toString();
 
-        // OTP valid for 5 minutes
-        const expiresAt =
-            new Date(
-                Date.now() +
-                5 * 60 * 1000
-            );
-
-        // MySQL DATETIME format
-        const mysqlExpiresAt =
-            expiresAt
-                .toISOString()
-                .slice(0, 19)
-                .replace("T", " ");
-
         // ---------------------------------------------
         // DELETE OLD OTPs
         // ---------------------------------------------
@@ -171,7 +150,7 @@ router.post("/request-otp", async (req, res) => {
             WHERE user_id = ?
             AND resume_id = ?
             `,
-            [user_id, resume_id]
+            [userId, resume_id]
         );
 
         // ---------------------------------------------
@@ -186,17 +165,17 @@ router.post("/request-otp", async (req, res) => {
                 resume_id,
                 email,
                 otp,
+                created_at,
                 expires_at,
                 verified
             )
-            VALUES (?, ?, ?, ?, ?, 0)
+            VALUES (?, ?, ?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE), 0)
             `,
             [
-                user_id,
+                userId,
                 resume_id,
                 resumeEmail,
                 otp,
-                mysqlExpiresAt,
             ]
         );
 
@@ -315,43 +294,56 @@ router.post("/request-otp", async (req, res) => {
 // =====================================================
 
 router.post("/verify-otp", async (req, res) => {
+    const connection = await db.getConnection();
+    let transactionStarted = false;
     try {
-        const {
-            user_id,
-            resume_id,
-            otp,
-        } = req.body;
+        const { resume_id, otp } = req.body;
+        const userId = req.user.id;
 
         // ---------------------------------------------
         // VALIDATION
         // ---------------------------------------------
 
-        if (!user_id || !resume_id || !otp) {
+        if (!resume_id || !otp) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "User ID, resume ID and OTP are required",
+                    "Resume ID and OTP are required",
             });
         }
+
+        const [ownedResume] = await connection.query(
+            "SELECT id FROM resumes WHERE id = ? AND user_id = ? LIMIT 1",
+            [resume_id, userId]
+        );
+        if (!ownedResume.length) {
+            return res.status(404).json({ success: false, message: "Resume not found." });
+        }
+
+        await connection.beginTransaction();
+        transactionStarted = true;
 
         // ---------------------------------------------
         // FIND OTP
         // ---------------------------------------------
 
         const [otpRows] =
-            await db.query(
+            await connection.query(
                 `
-                SELECT *
+                SELECT *, (expires_at <= UTC_TIMESTAMP()) AS is_expired
                 FROM resume_otps
                 WHERE user_id = ?
                 AND resume_id = ?
-                ORDER BY created_at DESC
+                ORDER BY id DESC
                 LIMIT 1
+                FOR UPDATE
                 `,
-                [user_id, resume_id]
+                [userId, resume_id]
             );
 
         if (otpRows.length === 0) {
+            await connection.rollback();
+            transactionStarted = false;
             return res.status(404).json({
                 success: false,
                 message:
@@ -366,28 +358,28 @@ router.post("/verify-otp", async (req, res) => {
         // CHECK ALREADY VERIFIED
         // ---------------------------------------------
 
-        if (otpRecord.verified === 1) {
-            return res.status(200).json({
-                success: true,
-                verified: true,
-                message:
-                    "OTP already verified",
+        if (Number(otpRecord.verified) === 1) {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(409).json({
+                success: false,
+                verified: false,
+                message: "This OTP has already been used. Request a new OTP to continue.",
             });
+        }
+        if (Number(otpRecord.verified) === 2) {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(400).json({ success: false, message: "This OTP was invalidated. Request a new OTP." });
         }
 
         // ---------------------------------------------
         // CHECK EXPIRY
         // ---------------------------------------------
 
-        const currentTime =
-            new Date();
-
-        const expiryTime =
-            new Date(
-                otpRecord.expires_at
-            );
-
-        if (currentTime > expiryTime) {
+        if (Number(otpRecord.is_expired) === 1) {
+            await connection.rollback();
+            transactionStarted = false;
             return res.status(400).json({
                 success: false,
                 message:
@@ -403,6 +395,10 @@ router.post("/verify-otp", async (req, res) => {
             String(otpRecord.otp).trim() !==
             String(otp).trim()
         ) {
+            // Retain the row for rate limiting but disallow further guesses.
+            await connection.query("UPDATE resume_otps SET verified = 2 WHERE id = ? AND verified = 0", [otpRecord.id]);
+            await connection.commit();
+            transactionStarted = false;
             return res.status(400).json({
                 success: false,
                 message:
@@ -414,14 +410,21 @@ router.post("/verify-otp", async (req, res) => {
         // MARK VERIFIED
         // ---------------------------------------------
 
-        await db.query(
+        const [updateResult] = await connection.query(
             `
             UPDATE resume_otps
             SET verified = 1
-            WHERE id = ?
+            WHERE id = ? AND verified = 0
             `,
             [otpRecord.id]
         );
+        if (!updateResult.affectedRows) {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(409).json({ success: false, message: "This OTP has already been used." });
+        }
+        await connection.commit();
+        transactionStarted = false;
 
         // ---------------------------------------------
         // SUCCESS
@@ -435,6 +438,7 @@ router.post("/verify-otp", async (req, res) => {
         });
 
     } catch (error) {
+        if (transactionStarted) await connection.rollback();
         console.error(
             "Verify Resume OTP Error:",
             error
@@ -446,6 +450,8 @@ router.post("/verify-otp", async (req, res) => {
                 "Failed to verify OTP",
             error: error.message,
         });
+    } finally {
+        connection.release();
     }
 });
 

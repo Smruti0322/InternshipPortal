@@ -3,22 +3,20 @@
    Used for: Login & Register pages
 ========================================================= */
 
-
 /* =========================================================
    1. MAIN AUTH PAGE
 ========================================================= */
 
 .auth-page {
-    min-height: 100vh;
-    background: #f5f8ff;
+  min-height: 100vh;
+  background: #f5f8ff;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    padding: 30px;
+  padding: 30px;
 }
-
 
 /* =========================================================
    2. MAIN AUTH CONTAINER
@@ -27,179 +25,171 @@
 ========================================================= */
 
 .auth-container {
-    width: 100%;
-    max-width: 1100px;
-    min-height: 650px;
+  width: 100%;
+  max-width: 1100px;
+  min-height: 650px;
 
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    border-radius: 24px;
+  border-radius: 24px;
 
-    overflow: hidden;
+  overflow: hidden;
 
-    box-shadow: 0 20px 60px rgba(16, 24, 40, 0.12);
+  box-shadow: 0 20px 60px rgba(16, 24, 40, 0.12);
 }
-
 
 /* =========================================================
    3. LEFT INFORMATION SECTION
 ========================================================= */
 
 .auth-info {
-    position: relative;
+  position: relative;
 
-    padding: 55px;
+  padding: 55px;
 
-    background: linear-gradient(135deg,
-            #155eef,
-            #3b82f6);
+  background: linear-gradient(135deg, #155eef, #3b82f6);
 
-    color: #ffffff;
+  color: #ffffff;
 
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
-
 
 /* =========================================================
    4. LOGO
 ========================================================= */
 
 .auth-logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.auth-logo>span {
-    width: 42px;
-    height: 42px;
+.auth-logo > span {
+  width: 42px;
+  height: 42px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    background: #ffffff;
-    color: #155eef;
+  background: #ffffff;
+  color: #155eef;
 
-    border-radius: 10px;
+  border-radius: 10px;
 
-    font-size: 16px;
-    font-weight: 800;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .auth-logo h2 {
-    margin: 0;
+  margin: 0;
 
-    font-size: 23px;
-    font-weight: 700;
+  font-size: 23px;
+  font-weight: 700;
 }
 
 .auth-logo h2 span {
-    color: #dbeafe;
+  color: #dbeafe;
 }
-
 
 /* =========================================================
    5. LEFT SIDE CONTENT
 ========================================================= */
 
 .auth-info-content {
-    margin-top: auto;
-    margin-bottom: auto;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .auth-small-title {
-    margin-bottom: 18px;
+  margin-bottom: 18px;
 
-    font-size: 13px;
-    font-weight: 700;
+  font-size: 13px;
+  font-weight: 700;
 
-    letter-spacing: 1.5px;
+  letter-spacing: 1.5px;
 
-    color: #dbeafe;
+  color: #dbeafe;
 }
 
 .auth-info-content h1 {
-    margin: 0 0 20px;
+  margin: 0 0 20px;
 
-    font-size: 46px;
-    line-height: 1.12;
+  font-size: 46px;
+  line-height: 1.12;
 
-    font-weight: 800;
+  font-weight: 800;
 }
 
 .auth-info-content h1 span {
-    color: #dbeafe;
+  color: #dbeafe;
 }
 
-.auth-info-content>p {
-    max-width: 450px;
+.auth-info-content > p {
+  max-width: 450px;
 
-    margin-bottom: 30px;
+  margin-bottom: 30px;
 
-    font-size: 15px;
-    line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.7;
 
-    color: #eaf2ff;
+  color: #eaf2ff;
 }
-
 
 /* =========================================================
    6. BENEFITS LIST
 ========================================================= */
 
 .auth-benefits {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .auth-benefits div {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 
-    font-size: 14px;
-    color: #ffffff;
+  font-size: 14px;
+  color: #ffffff;
 }
 
 .auth-benefits div span {
-    width: 22px;
-    height: 22px;
+  width: 22px;
+  height: 22px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.18);
 
-    border-radius: 50%;
+  border-radius: 50%;
 
-    font-size: 12px;
-    font-weight: 700;
+  font-size: 12px;
+  font-weight: 700;
 }
-
 
 /* =========================================================
    7. RIGHT FORM SECTION
 ========================================================= */
 
 .auth-form-section {
-    position: relative;
+  position: relative;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    padding: 50px;
+  padding: 50px;
 
-    background: #ffffff;
+  background: #ffffff;
 }
-
 
 /* =========================================================
    8. LANGUAGE DROPDOWN
@@ -207,76 +197,69 @@
 ========================================================= */
 
 .auth-language {
-    position: absolute;
-    top: 45px;
-    right: 25px;
-    z-index: 9999;
+  position: absolute;
+  top: 45px;
+  right: 25px;
+  z-index: 9999;
 }
-
 
 /* =========================================================
    9. LANGUAGE SELECT BOX
 ========================================================= */
 
 .auth-language .language-select {
-    min-width: 135px;
-    height: 42px;
+  min-width: 135px;
+  height: 42px;
 
-    padding: 0 38px 0 14px;
+  padding: 0 38px 0 14px;
 
-    border: 1px solid #d0d5dd;
-    border-radius: 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    color: #344054;
+  color: #344054;
 
-    font-size: 13px;
-    font-weight: 600;
+  font-size: 13px;
+  font-weight: 600;
 
-    outline: none;
+  outline: none;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    box-shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
 
-    transition: all 0.2s ease;
+  transition: all 0.2s ease;
 }
-
 
 /* =========================================================
    10. LANGUAGE DROPDOWN - HOVER
 ========================================================= */
 
 .auth-language .language-select:hover {
-    border-color: #155eef;
+  border-color: #155eef;
 
-    box-shadow:
-        0 5px 18px rgba(21, 94, 239, 0.12);
+  box-shadow: 0 5px 18px rgba(21, 94, 239, 0.12);
 }
-
 
 /* =========================================================
    11. LANGUAGE DROPDOWN - FOCUS
 ========================================================= */
 
 .auth-language .language-select:focus {
-    border-color: #155eef;
+  border-color: #155eef;
 
-    box-shadow:
-        0 0 0 3px rgba(21, 94, 239, 0.12);
+  box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
 }
-
 
 /* =========================================================
    12. FORM WRAPPER
 ========================================================= */
 
 .auth-form-wrapper {
-    width: 100%;
-    max-width: 430px;
+  width: 100%;
+  max-width: 430px;
 }
-
 
 /* =========================================================
    13. MOBILE LOGO
@@ -284,262 +267,242 @@
 ========================================================= */
 
 .mobile-auth-logo {
-    display: none;
+  display: none;
 }
-
 
 /* =========================================================
    14. FORM WELCOME TEXT
 ========================================================= */
 
 .form-welcome {
-    margin: 0 0 10px;
+  margin: 0 0 10px;
 
-    font-size: 12px;
-    font-weight: 700;
+  font-size: 12px;
+  font-weight: 700;
 
-    letter-spacing: 1.5px;
+  letter-spacing: 1.5px;
 
-    color: #155eef;
+  color: #155eef;
 }
-
 
 /* =========================================================
    15. FORM HEADING
 ========================================================= */
 
-.auth-form-wrapper>h2 {
-    margin: 0 0 10px;
+.auth-form-wrapper > h2 {
+  margin: 0 0 10px;
 
-    font-size: 30px;
-    line-height: 1.2;
+  font-size: 30px;
+  line-height: 1.2;
 
-    color: #101828;
+  color: #101828;
 }
 
 .form-description {
-    margin: 0 0 28px;
+  margin: 0 0 28px;
 
-    color: #667085;
+  color: #667085;
 
-    font-size: 14px;
-    line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.6;
 }
-
 
 /* =========================================================
    16. ERROR / SUCCESS MESSAGE
 ========================================================= */
 
 .auth-message {
-    padding: 12px 14px;
+  padding: 12px 14px;
 
-    margin-bottom: 18px;
+  margin-bottom: 18px;
 
-    border-radius: 8px;
+  border-radius: 8px;
 
-    font-size: 13px;
-    line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.5;
 }
-
 
 /* Error message */
 
 .auth-message.error {
-    background: #fef3f2;
+  background: #fef3f2;
 
-    border: 1px solid #fecdca;
+  border: 1px solid #fecdca;
 
-    color: #b42318;
+  color: #b42318;
 }
-
 
 /* Success message */
 
 .auth-message.success {
-    background: #ecfdf3;
+  background: #ecfdf3;
 
-    border: 1px solid #abefc6;
+  border: 1px solid #abefc6;
 
-    color: #067647;
+  color: #067647;
 }
-
 
 /* =========================================================
    17. INPUT GROUP
 ========================================================= */
 
 .input-group {
-    margin-bottom: 18px;
+  margin-bottom: 18px;
 }
-
 
 /* =========================================================
    18. INPUT LABEL
 ========================================================= */
 
 .input-group label {
-    display: block;
+  display: block;
 
-    margin-bottom: 7px;
+  margin-bottom: 7px;
 
-    font-size: 13px;
-    font-weight: 600;
+  font-size: 13px;
+  font-weight: 600;
 
-    color: #344054;
+  color: #344054;
 }
-
 
 /* =========================================================
    19. INPUT BOX
 ========================================================= */
 
 .input-group input {
-    width: 100%;
+  width: 100%;
 
-    height: 48px;
+  height: 48px;
 
-    padding: 0 14px;
+  padding: 0 14px;
 
-    box-sizing: border-box;
+  box-sizing: border-box;
 
-    border: 1px solid #d0d5dd;
+  border: 1px solid #d0d5dd;
 
-    border-radius: 9px;
+  border-radius: 9px;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    color: #101828;
+  color: #101828;
 
-    font-size: 14px;
+  font-size: 14px;
 
-    outline: none;
+  outline: none;
 
-    transition: all 0.2s ease;
+  transition: all 0.2s ease;
 }
-
 
 /* Input placeholder */
 
 .input-group input::placeholder {
-    color: #98a2b3;
+  color: #98a2b3;
 }
-
 
 /* Input hover */
 
 .input-group input:hover {
-    border-color: #98a2b3;
+  border-color: #98a2b3;
 }
-
 
 /* Input focus */
 
 .input-group input:focus {
-    border-color: #155eef;
+  border-color: #155eef;
 
-    box-shadow:
-        0 0 0 3px rgba(21, 94, 239, 0.10);
+  box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.1);
 }
-
 
 /* Disabled input */
 
 .input-group input:disabled {
-    background: #f2f4f7;
+  background: #f2f4f7;
 
-    cursor: not-allowed;
+  cursor: not-allowed;
 
-    opacity: 0.7;
+  opacity: 0.7;
 }
-
 
 /* =========================================================
    20. SUBMIT BUTTON
 ========================================================= */
 
 .auth-submit-btn {
-    width: 100%;
+  width: 100%;
 
-    height: 48px;
+  height: 48px;
 
-    margin-top: 8px;
+  margin-top: 8px;
 
-    border: none;
+  border: none;
 
-    border-radius: 9px;
+  border-radius: 9px;
 
-    background: #155eef;
+  background: #155eef;
 
-    color: #ffffff;
+  color: #ffffff;
 
-    font-size: 14px;
-    font-weight: 700;
+  font-size: 14px;
+  font-weight: 700;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    transition: all 0.2s ease;
+  transition: all 0.2s ease;
 }
-
 
 /* Button hover */
 
 .auth-submit-btn:hover {
-    background: #004eeb;
+  background: #004eeb;
 
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 
-    box-shadow:
-        0 6px 16px rgba(21, 94, 239, 0.20);
+  box-shadow: 0 6px 16px rgba(21, 94, 239, 0.2);
 }
-
 
 /* Button active */
 
 .auth-submit-btn:active {
-    transform: translateY(0);
+  transform: translateY(0);
 }
-
 
 /* Disabled button */
 
 .auth-submit-btn:disabled {
-    background: #98a2b3;
+  background: #98a2b3;
 
-    cursor: not-allowed;
+  cursor: not-allowed;
 
-    transform: none;
+  transform: none;
 
-    box-shadow: none;
+  box-shadow: none;
 }
-
 
 /* =========================================================
    21. LOGIN / REGISTER SWITCH
 ========================================================= */
 
 .auth-switch {
-    margin-top: 22px;
+  margin-top: 22px;
 
-    text-align: center;
+  text-align: center;
 
-    font-size: 13px;
+  font-size: 13px;
 
-    color: #667085;
+  color: #667085;
 }
 
 .auth-switch a {
-    color: #155eef;
+  color: #155eef;
 
-    font-weight: 700;
+  font-weight: 700;
 
-    text-decoration: none;
+  text-decoration: none;
 }
 
 .auth-switch a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
-
 
 /* =========================================================
    22. OTP MODAL
@@ -547,477 +510,502 @@
 ========================================================= */
 
 .otp-overlay {
-    position: fixed;
+  position: fixed;
 
-    inset: 0;
+  inset: 0;
 
-    z-index: 10000;
+  z-index: 10000;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    padding: 20px;
+  padding: 20px;
 
-    background: rgba(16, 24, 40, 0.55);
+  background: rgba(16, 24, 40, 0.55);
 }
-
 
 /* =========================================================
    23. OTP MODAL BOX
 ========================================================= */
 
 .otp-modal {
-    position: relative;
+  position: relative;
 
-    width: 100%;
-    max-width: 420px;
+  width: 100%;
+  max-width: 420px;
 
-    padding: 35px;
+  padding: 35px;
 
-    background: #ffffff;
+  background: #ffffff;
 
-    border-radius: 18px;
+  border-radius: 18px;
 
-    text-align: center;
+  text-align: center;
 
-    box-shadow:
-        0 25px 70px rgba(16, 24, 40, 0.25);
+  box-shadow: 0 25px 70px rgba(16, 24, 40, 0.25);
 
-    animation: otpModalShow 0.2s ease;
+  animation: otpModalShow 0.2s ease;
 }
-
 
 /* OTP modal animation */
 
 @keyframes otpModalShow {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
 
-    from {
-        opacity: 0;
-        transform: translateY(10px) scale(0.98);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
-
 
 /* =========================================================
    24. OTP CLOSE BUTTON
 ========================================================= */
 
 .otp-close {
-    position: absolute;
+  position: absolute;
 
-    top: 12px;
-    right: 14px;
+  top: 12px;
+  right: 14px;
 
-    width: 32px;
-    height: 32px;
+  width: 32px;
+  height: 32px;
 
-    border: none;
+  border: none;
 
-    background: transparent;
+  background: transparent;
 
-    color: #667085;
+  color: #667085;
 
-    font-size: 24px;
+  font-size: 24px;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    border-radius: 50%;
+  border-radius: 50%;
 }
 
 .otp-close:hover {
-    background: #f2f4f7;
+  background: #f2f4f7;
 
-    color: #101828;
+  color: #101828;
 }
-
 
 /* =========================================================
    25. OTP ICON
 ========================================================= */
 
 .otp-icon {
-    width: 55px;
-    height: 55px;
+  width: 55px;
+  height: 55px;
 
-    margin: 0 auto 18px;
+  margin: 0 auto 18px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    border-radius: 50%;
+  border-radius: 50%;
 
-    background: #eff4ff;
+  background: #eff4ff;
 
-    color: #155eef;
+  color: #155eef;
 
-    font-size: 25px;
+  font-size: 25px;
 }
-
 
 /* =========================================================
    26. OTP HEADING
 ========================================================= */
 
 .otp-modal h2 {
-    margin: 0 0 10px;
+  margin: 0 0 10px;
 
-    font-size: 24px;
+  font-size: 24px;
 
-    color: #101828;
+  color: #101828;
 }
-
 
 /* =========================================================
    27. OTP DESCRIPTION
 ========================================================= */
 
 .otp-modal p {
-    margin: 0 0 20px;
+  margin: 0 0 20px;
 
-    color: #667085;
+  color: #667085;
 
-    font-size: 13px;
+  font-size: 13px;
 
-    line-height: 1.6;
+  line-height: 1.6;
 }
-
 
 /* =========================================================
    28. OTP SUCCESS MESSAGE
 ========================================================= */
 
 .otp-success {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 
-    padding: 10px;
+  padding: 10px;
 
-    border-radius: 8px;
+  border-radius: 8px;
 
-    background: #ecfdf3;
+  background: #ecfdf3;
 
-    color: #067647;
+  color: #067647;
 
-    font-size: 13px;
+  font-size: 13px;
 }
-
 
 /* =========================================================
    29. OTP ERROR MESSAGE
 ========================================================= */
 
 .otp-error {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 
-    padding: 10px;
+  padding: 10px;
 
-    border-radius: 8px;
+  border-radius: 8px;
 
-    background: #fef3f2;
+  background: #fef3f2;
 
-    color: #b42318;
+  color: #b42318;
 
-    font-size: 13px;
+  font-size: 13px;
 }
-
 
 /* =========================================================
    30. OTP INPUT
 ========================================================= */
 
 .otp-modal input {
-    width: 100%;
+  width: 100%;
 
-    height: 48px;
+  height: 48px;
 
-    box-sizing: border-box;
+  box-sizing: border-box;
 
-    padding: 0 14px;
+  padding: 0 14px;
 
-    border: 1px solid #d0d5dd;
+  border: 1px solid #d0d5dd;
 
-    border-radius: 9px;
+  border-radius: 9px;
 
-    outline: none;
+  outline: none;
 
-    text-align: center;
+  text-align: center;
 
-    letter-spacing: 5px;
+  letter-spacing: 5px;
 
-    font-size: 18px;
-    font-weight: 600;
+  font-size: 18px;
+  font-weight: 600;
 
-    color: #101828;
+  color: #101828;
 }
 
 .otp-modal input:focus {
-    border-color: #155eef;
+  border-color: #155eef;
 
-    box-shadow:
-        0 0 0 3px rgba(21, 94, 239, 0.10);
+  box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.1);
 }
-
 
 /* =========================================================
    31. OTP VERIFY BUTTON
 ========================================================= */
 
 .otp-modal form button {
-    width: 100%;
+  width: 100%;
 
-    height: 48px;
+  height: 48px;
 
-    margin-top: 14px;
+  margin-top: 14px;
 
-    border: none;
+  border: none;
 
-    border-radius: 9px;
+  border-radius: 9px;
 
-    background: #155eef;
+  background: #155eef;
 
-    color: #ffffff;
+  color: #ffffff;
 
-    font-size: 14px;
-    font-weight: 700;
+  font-size: 14px;
+  font-weight: 700;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    transition: all 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .otp-modal form button:hover {
-    background: #004eeb;
+  background: #004eeb;
 }
 
 .otp-modal form button:disabled {
-    background: #98a2b3;
+  background: #98a2b3;
 
-    cursor: not-allowed;
+  cursor: not-allowed;
 }
-
 
 /* =========================================================
    32. OTP FOOTER TEXT
 ========================================================= */
 
 .otp-modal small {
-    display: block;
+  display: block;
 
-    margin-top: 16px;
+  margin-top: 16px;
 
-    color: #98a2b3;
+  color: #98a2b3;
 
-    font-size: 12px;
+  font-size: 12px;
 }
-
 
 /* =========================================================
    33. TABLET RESPONSIVE
 ========================================================= */
 
 @media (max-width: 900px) {
+  .auth-page {
+    padding: 20px;
+  }
 
-    .auth-page {
-        padding: 20px;
-    }
+  .auth-container {
+    grid-template-columns: 1fr;
 
-    .auth-container {
-        grid-template-columns: 1fr;
+    max-width: 600px;
 
-        max-width: 600px;
+    min-height: auto;
+  }
 
-        min-height: auto;
-    }
+  /* Hide left information section */
 
-    /* Hide left information section */
+  .auth-info {
+    display: none;
+  }
 
-    .auth-info {
-        display: none;
-    }
+  .auth-form-section {
+    min-height: 650px;
 
-    .auth-form-section {
-        min-height: 650px;
+    padding: 50px 35px;
+  }
 
-        padding: 50px 35px;
-    }
+  /* Show mobile logo */
 
-    /* Show mobile logo */
+  .mobile-auth-logo {
+    display: flex;
 
-    .mobile-auth-logo {
-        display: flex;
+    align-items: center;
+    justify-content: center;
 
-        align-items: center;
-        justify-content: center;
+    gap: 10px;
 
-        gap: 10px;
+    margin-bottom: 25px;
+  }
 
-        margin-bottom: 25px;
-    }
+  .mobile-auth-logo > span {
+    width: 38px;
+    height: 38px;
 
-    .mobile-auth-logo>span {
-        width: 38px;
-        height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    background: #155eef;
 
-        background: #155eef;
+    color: #ffffff;
 
-        color: #ffffff;
+    border-radius: 9px;
 
-        border-radius: 9px;
+    font-size: 14px;
+    font-weight: 800;
+  }
 
-        font-size: 14px;
-        font-weight: 800;
-    }
+  .mobile-auth-logo h2 {
+    margin: 0;
 
-    .mobile-auth-logo h2 {
-        margin: 0;
+    font-size: 21px;
 
-        font-size: 21px;
+    color: #101828;
+  }
 
-        color: #101828;
-    }
-
-    .mobile-auth-logo h2 span {
-        color: #155eef;
-    }
+  .mobile-auth-logo h2 span {
+    color: #155eef;
+  }
 }
-
 
 /* =========================================================
    34. MOBILE RESPONSIVE
 ========================================================= */
 
 @media (max-width: 600px) {
+  .auth-page {
+    padding: 0;
 
-    .auth-page {
-        padding: 0;
+    align-items: stretch;
+  }
 
-        align-items: stretch;
-    }
+  .auth-container {
+    width: 100%;
 
-    .auth-container {
-        width: 100%;
+    min-height: 100vh;
 
-        min-height: 100vh;
+    border-radius: 0;
 
-        border-radius: 0;
+    box-shadow: none;
+  }
 
-        box-shadow: none;
-    }
+  .auth-form-section {
+    min-height: 100vh;
 
-    .auth-form-section {
-        min-height: 100vh;
+    padding: 70px 22px 30px;
+  }
 
-        padding: 70px 22px 30px;
-    }
+  .auth-form-wrapper {
+    max-width: 100%;
+  }
 
-    .auth-form-wrapper {
-        max-width: 100%;
-    }
-
-
-    /* -------------------------
+  /* -------------------------
        Language dropdown mobile
     ------------------------- */
 
-    .auth-language {
-        top: 15px;
-        right: 15px;
-    }
+  .auth-language {
+    top: 15px;
+    right: 15px;
+  }
 
-    .auth-language .language-select {
-        min-width: 120px;
+  .auth-language .language-select {
+    min-width: 120px;
 
-        height: 38px;
+    height: 38px;
 
-        padding: 0 30px 0 11px;
+    padding: 0 30px 0 11px;
 
-        font-size: 12px;
+    font-size: 12px;
 
-        border-radius: 9px;
-    }
+    border-radius: 9px;
+  }
 
-
-    /* -------------------------
+  /* -------------------------
        Form heading mobile
     ------------------------- */
 
-    .auth-form-wrapper>h2 {
-        font-size: 26px;
-    }
+  .auth-form-wrapper > h2 {
+    font-size: 26px;
+  }
 
-    .form-description {
-        font-size: 13px;
-    }
+  .form-description {
+    font-size: 13px;
+  }
 
-
-    /* -------------------------
+  /* -------------------------
        Input mobile
     ------------------------- */
 
-    .input-group input {
-        height: 46px;
+  .input-group input {
+    height: 46px;
 
-        font-size: 14px;
-    }
+    font-size: 14px;
+  }
 
-
-    /* -------------------------
+  /* -------------------------
        Button mobile
     ------------------------- */
 
-    .auth-submit-btn {
-        height: 46px;
-    }
+  .auth-submit-btn {
+    height: 46px;
+  }
 
-
-    /* -------------------------
+  /* -------------------------
        OTP modal mobile
     ------------------------- */
 
-    .otp-modal {
-        padding: 30px 22px;
+  .otp-modal {
+    padding: 30px 22px;
 
-        border-radius: 15px;
-    }
+    border-radius: 15px;
+  }
 
-    .otp-modal h2 {
-        font-size: 21px;
-    }
+  .otp-modal h2 {
+    font-size: 21px;
+  }
 }
-
 
 /* =========================================================
    35. VERY SMALL MOBILE
 ========================================================= */
 
 @media (max-width: 380px) {
+  .auth-form-section {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
 
-    .auth-form-section {
-        padding-left: 17px;
-        padding-right: 17px;
-    }
+  .auth-language {
+    right: 10px;
+  }
 
-    .auth-language {
-        right: 10px;
-    }
+  .auth-language .language-select {
+    min-width: 110px;
 
-    .auth-language .language-select {
-        min-width: 110px;
+    font-size: 11px;
+  }
 
-        font-size: 11px;
-    }
+  .auth-form-wrapper > h2 {
+    font-size: 23px;
+  }
+}
 
-    .auth-form-wrapper>h2 {
-        font-size: 23px;
-    }
+/* =========================================
+   PASSWORD SHOW / HIDE
+========================================= */
+
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 48px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  color: #64748b;
+  cursor: pointer;
+
+  z-index: 2;
+}
+
+.password-toggle-btn:hover {
+  color: #2563eb;
+}
+
+.password-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.password-toggle-btn:focus {
+  outline: none;
 }

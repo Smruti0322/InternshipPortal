@@ -23,6 +23,23 @@
     gap: 30px;
 }
 
+.back-home-btn {
+    display: block;
+    margin: 0 0 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #475569;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.back-home-btn:hover {
+    color: #1d4ed8;
+}
+
 .page-badge {
     display: inline-flex;
 
@@ -680,6 +697,10 @@
 
     .create-resume-btn {
         justify-content: center;
+    }
+
+    .back-home-btn {
+        min-height: 40px;
     }
 
     .resume-stats {

@@ -2,8 +2,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+const SUPPORTED_LANGUAGES = [
+    "en",
+    "es",
+    "hi",
+    "pt",
+    "zh",
+    "fr",
+];
+
 function LanguageSelector() {
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
 
     const [loading, setLoading] = useState(false);
     const [showOtpModal, setShowOtpModal] = useState(false);
@@ -14,12 +23,28 @@ function LanguageSelector() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
-    /*
-    =========================================================
-    RESEND TIMER
-    =========================================================
-    */
+    const currentLanguage = SUPPORTED_LANGUAGES.includes(
+        i18n.language
+    )
+        ? i18n.language
+        : i18n.language?.split("-")[0] || "en";
 
+    /*
+        --------------------------------------------------
+        French OTP modal translations
+        --------------------------------------------------
+
+        OTP modal must remain French before verification.
+        Therefore these strings intentionally use the
+        French translation keys from the JSON files.
+    */
+    const frenchOtp = (key) => t(`frenchOtp.${key}`);
+
+    /*
+        --------------------------------------------------
+        Resend OTP countdown
+        --------------------------------------------------
+    */
     useEffect(() => {
         if (!showOtpModal || resendTimer <= 0) {
             return;
@@ -40,11 +65,10 @@ function LanguageSelector() {
     }, [showOtpModal, resendTimer]);
 
     /*
-    =========================================================
-    LANGUAGE CHANGE
-    =========================================================
+        --------------------------------------------------
+        Change language
+        --------------------------------------------------
     */
-
     const handleLanguageChange = async (event) => {
         const language = event.target.value;
         const token = localStorage.getItem("token");
@@ -53,25 +77,20 @@ function LanguageSelector() {
         setMessage("");
 
         /*
-        =====================================================
-        SECURITY CHECK
-        =====================================================
+            User must be logged in
         */
-
         if (!token) {
-            setError(
-                "Please login to change your language preference."
-            );
-
+            setError(t("loginRequiredLanguage"));
             return;
         }
 
         /*
-        =====================================================
-        FRENCH REQUIRES OTP
-        =====================================================
-        */
+            --------------------------------------------------
+            FRENCH LANGUAGE
+            --------------------------------------------------
 
+            Do NOT change i18n language until OTP succeeds.
+        */
         if (language === "fr") {
             try {
                 setLoading(true);
@@ -81,21 +100,18 @@ function LanguageSelector() {
                     {
                         method: "POST",
                         headers: {
-                            "Content-Type":
-                                "application/json",
-                            Authorization:
-                                `Bearer ${ token } `,
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
                         },
                     }
                 );
 
-                const data =
-                    await response.json();
+                const data = await response.json();
 
                 if (!response.ok) {
                     throw new Error(
                         data.message ||
-                        "Failed to send OTP."
+                        frenchOtp("failedSendOtp")
                     );
                 }
 
@@ -104,9 +120,8 @@ function LanguageSelector() {
                 setResendTimer(60);
 
                 setMessage(
-                    "OTP has been sent to your registered email."
+                    frenchOtp("otpSent")
                 );
-
             } catch (error) {
                 console.error(
                     "French OTP error:",
@@ -115,9 +130,8 @@ function LanguageSelector() {
 
                 setError(
                     error.message ||
-                    "Unable to send OTP."
+                    frenchOtp("unableSendOtp")
                 );
-
             } finally {
                 setLoading(false);
             }
@@ -126,11 +140,10 @@ function LanguageSelector() {
         }
 
         /*
-        =====================================================
-        OTHER LANGUAGES
-        =====================================================
+            --------------------------------------------------
+            NORMAL LANGUAGE CHANGE
+            --------------------------------------------------
         */
-
         try {
             setLoading(true);
 
@@ -139,10 +152,8 @@ function LanguageSelector() {
                 {
                     method: "PUT",
                     headers: {
-                        "Content-Type":
-                            "application/json",
-                        Authorization:
-                            `Bearer ${ token } `,
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({
                         language,
@@ -150,41 +161,53 @@ function LanguageSelector() {
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(
                     data.message ||
-                    "Failed to change language."
+                    t("failedChangeLanguage")
                 );
             }
 
-            await i18n.changeLanguage(
-                language
-            );
+            /*
+                Change UI language without refresh
+            */
+            await i18n.changeLanguage(language);
 
+            /*
+                Save browser preference
+            */
             localStorage.setItem(
                 "language",
                 language
             );
 
+            /*
+                Keep local user data synchronized
+            */
             const storedUser =
                 localStorage.getItem("user");
 
             if (storedUser) {
-                const user =
-                    JSON.parse(storedUser);
+                try {
+                    const user =
+                        JSON.parse(storedUser);
 
-                user.preferred_language =
-                    language;
+                    user.preferred_language =
+                        language;
 
-                localStorage.setItem(
-                    "user",
-                    JSON.stringify(user)
-                );
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(user)
+                    );
+                } catch (storageError) {
+                    console.error(
+                        "User storage update error:",
+                        storageError
+                    );
+                }
             }
-
         } catch (error) {
             console.error(
                 "Language change error:",
@@ -193,28 +216,25 @@ function LanguageSelector() {
 
             setError(
                 error.message ||
-                "Unable to change language."
+                t("unableChangeLanguage")
             );
-
         } finally {
             setLoading(false);
         }
     };
 
     /*
-    =========================================================
-    VERIFY OTP
-    =========================================================
+        --------------------------------------------------
+        Verify French OTP
+        --------------------------------------------------
     */
-
     const handleVerifyOtp = async (event) => {
         event.preventDefault();
 
         if (!otp || otp.length !== 6) {
             setError(
-                "Please enter a valid 6-digit OTP."
+                frenchOtp("validOtp")
             );
-
             return;
         }
 
@@ -225,13 +245,9 @@ function LanguageSelector() {
             const token =
                 localStorage.getItem("token");
 
-            /*
-            Security check again
-            */
-
             if (!token) {
                 setError(
-                    "Your session has expired. Please login again."
+                    frenchOtp("sessionExpired")
                 );
 
                 setShowOtpModal(false);
@@ -244,10 +260,8 @@ function LanguageSelector() {
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type":
-                            "application/json",
-                        Authorization:
-                            `Bearer ${ token } `,
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({
                         otp,
@@ -255,44 +269,66 @@ function LanguageSelector() {
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(
                     data.message ||
-                    "OTP verification failed."
+                    frenchOtp(
+                        "otpVerificationFailed"
+                    )
                 );
             }
 
+            /*
+                --------------------------------------------------
+                OTP SUCCESS
+                --------------------------------------------------
+
+                ONLY NOW change application language to French.
+            */
             await i18n.changeLanguage("fr");
 
+            /*
+                Save browser preference
+            */
             localStorage.setItem(
                 "language",
                 "fr"
             );
 
+            /*
+                Keep local user data synchronized
+            */
             const storedUser =
                 localStorage.getItem("user");
 
             if (storedUser) {
-                const user =
-                    JSON.parse(storedUser);
+                try {
+                    const user =
+                        JSON.parse(storedUser);
 
-                user.preferred_language =
-                    "fr";
+                    user.preferred_language = "fr";
 
-                localStorage.setItem(
-                    "user",
-                    JSON.stringify(user)
-                );
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(user)
+                    );
+                } catch (storageError) {
+                    console.error(
+                        "User storage update error:",
+                        storageError
+                    );
+                }
             }
 
+            /*
+                Close OTP modal
+            */
             setShowOtpModal(false);
             setOtp("");
             setMessage("");
             setError("");
-
         } catch (error) {
             console.error(
                 "OTP verification error:",
@@ -301,22 +337,25 @@ function LanguageSelector() {
 
             setError(
                 error.message ||
-                "OTP verification failed."
+                frenchOtp(
+                    "otpVerificationFailed"
+                )
             );
-
         } finally {
             setOtpLoading(false);
         }
     };
 
     /*
-    =========================================================
-    RESEND OTP
-    =========================================================
+        --------------------------------------------------
+        Resend French OTP
+        --------------------------------------------------
     */
-
     const handleResendOtp = async () => {
-        if (resendTimer > 0 || resendLoading) {
+        if (
+            resendTimer > 0 ||
+            resendLoading
+        ) {
             return;
         }
 
@@ -330,7 +369,7 @@ function LanguageSelector() {
 
             if (!token) {
                 setError(
-                    "Your session has expired. Please login again."
+                    frenchOtp("sessionExpired")
                 );
 
                 setShowOtpModal(false);
@@ -342,20 +381,17 @@ function LanguageSelector() {
                 "http://localhost:5000/api/language/request-french-otp",
                 {
                     method: "POST",
-                   headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${ token }`,
-},
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             if (!response.ok) {
-                if (
-                    data.remainingSeconds
-                ) {
+                if (data.remainingSeconds) {
                     setResendTimer(
                         data.remainingSeconds
                     );
@@ -363,7 +399,7 @@ function LanguageSelector() {
 
                 throw new Error(
                     data.message ||
-                    "Failed to resend OTP."
+                    frenchOtp("failedSendOtp")
                 );
             }
 
@@ -371,9 +407,8 @@ function LanguageSelector() {
             setResendTimer(60);
 
             setMessage(
-                "A new OTP has been sent to your registered email."
+                frenchOtp("newOtpSent")
             );
-
         } catch (error) {
             console.error(
                 "Resend OTP error:",
@@ -382,20 +417,18 @@ function LanguageSelector() {
 
             setError(
                 error.message ||
-                "Unable to resend OTP."
+                frenchOtp("unableSendOtp")
             );
-
         } finally {
             setResendLoading(false);
         }
     };
 
     /*
-    =========================================================
-    CLOSE MODAL
-    =========================================================
+        --------------------------------------------------
+        Close OTP modal
+        --------------------------------------------------
     */
-
     const closeModal = () => {
         setShowOtpModal(false);
         setOtp("");
@@ -404,22 +437,16 @@ function LanguageSelector() {
         setResendTimer(0);
     };
 
-    /*
-    =========================================================
-    UI
-    =========================================================
-    */
-
     return (
         <>
             <div className="language-selector-wrapper">
 
                 <select
-                    value={i18n.language}
+                    value={currentLanguage}
                     onChange={handleLanguageChange}
                     disabled={loading}
                     className="language-select"
-                    aria-label="Select language"
+                    aria-label={t("language")}
                 >
                     <option value="en">
                         English
@@ -451,7 +478,6 @@ function LanguageSelector() {
                         {error}
                     </div>
                 )}
-
             </div>
 
             {showOtpModal &&
@@ -464,7 +490,9 @@ function LanguageSelector() {
                                 type="button"
                                 className="otp-close"
                                 onClick={closeModal}
-                                aria-label="Close OTP modal"
+                                aria-label={frenchOtp(
+                                    "close"
+                                )}
                             >
                                 ×
                             </button>
@@ -474,13 +502,15 @@ function LanguageSelector() {
                             </div>
 
                             <h2>
-                                Verify Your Email
+                                {frenchOtp(
+                                    "verifyYourEmail"
+                                )}
                             </h2>
 
                             <p>
-                                We sent a 6-digit OTP
-                                to your registered
-                                email address.
+                                {frenchOtp(
+                                    "otpSentMessage"
+                                )}
                             </p>
 
                             {message && (
@@ -500,16 +530,17 @@ function LanguageSelector() {
                                     handleVerifyOtp
                                 }
                             >
-
                                 <input
                                     type="text"
                                     inputMode="numeric"
                                     maxLength="6"
-                                    placeholder="Enter 6-digit OTP"
+                                    placeholder={frenchOtp(
+                                        "enterOtp"
+                                    )}
                                     value={otp}
-                                    onChange={(e) => {
+                                    onChange={(event) => {
                                         const value =
-                                            e.target.value.replace(
+                                            event.target.value.replace(
                                                 /\D/g,
                                                 ""
                                             );
@@ -529,18 +560,22 @@ function LanguageSelector() {
                                     }
                                 >
                                     {otpLoading
-                                        ? "Verifying..."
-                                        : "Verify & Continue"}
+                                        ? frenchOtp(
+                                            "verifying"
+                                        )
+                                        : frenchOtp(
+                                            "verifyContinue"
+                                        )}
                                 </button>
-
                             </form>
 
                             <div className="otp-resend">
 
                                 {resendTimer > 0 ? (
                                     <p>
-                                        Resend OTP{" "}
-                                        in{" "}
+                                        {frenchOtp(
+                                            "resendIn"
+                                        )}{" "}
                                         <strong>
                                             {resendTimer}s
                                         </strong>
@@ -557,19 +592,25 @@ function LanguageSelector() {
                                         }
                                     >
                                         {resendLoading
-                                            ? "Sending..."
-                                            : "Resend OTP"}
+                                            ? frenchOtp(
+                                                "sending"
+                                            )
+                                            : frenchOtp(
+                                                "resendOtp"
+                                            )}
                                     </button>
                                 )}
 
                             </div>
 
                             <small>
-                                OTP is valid for
-                                5 minutes.
+                                {frenchOtp(
+                                    "otpValid"
+                                )}
                             </small>
 
                         </div>
+
                     </div>,
                     document.body
                 )}
@@ -578,4 +619,3 @@ function LanguageSelector() {
 }
 
 export default LanguageSelector;
-

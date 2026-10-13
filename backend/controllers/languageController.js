@@ -139,7 +139,12 @@ const getLanguage = async (req, res) => {
         const userId = req.user.id;
 
         const [rows] = await db.query(
-            "SELECT preferred_language FROM users WHERE id = ?",
+            `
+            SELECT preferred_language
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            `,
             [userId]
         );
 
@@ -149,10 +154,17 @@ const getLanguage = async (req, res) => {
             });
         }
 
+        const language =
+            supportedLanguages.includes(
+                rows[0].preferred_language
+            )
+                ? rows[0].preferred_language
+                : "en";
+
         return res.status(200).json({
-            language:
-                rows[0].preferred_language || "en",
+            language,
         });
+
     } catch (error) {
         console.error(
             "Get language error:",
@@ -164,6 +176,75 @@ const getLanguage = async (req, res) => {
                 "Failed to get language preference.",
         });
     }
+};
+
+/*
+=========================================================
+GET CLIENT INFORMATION
+=========================================================
+*/
+
+const getClientInformation = (req) => {
+    const userAgent =
+        req.headers["user-agent"] || "Unknown";
+
+    const ipAddress =
+        req.headers["x-forwarded-for"]
+            ?.split(",")[0]
+            ?.trim() ||
+        req.socket?.remoteAddress ||
+        "Unknown";
+
+    let browser = "Unknown";
+    let device = "Unknown";
+
+    /*
+    -----------------------------------------------------
+    BROWSER DETECTION
+    -----------------------------------------------------
+    */
+
+    if (/Edg\//i.test(userAgent)) {
+        browser = "Microsoft Edge";
+    } else if (/OPR\//i.test(userAgent)) {
+        browser = "Opera";
+    } else if (/Chrome\//i.test(userAgent)) {
+        browser = "Google Chrome";
+    } else if (/Firefox\//i.test(userAgent)) {
+        browser = "Mozilla Firefox";
+    } else if (/Safari\//i.test(userAgent)) {
+        browser = "Safari";
+    } else if (/MSIE|Trident/i.test(userAgent)) {
+        browser = "Internet Explorer";
+    }
+
+    /*
+    -----------------------------------------------------
+    DEVICE DETECTION
+    -----------------------------------------------------
+    */
+
+    if (/iPhone/i.test(userAgent)) {
+        device = "iPhone";
+    } else if (/iPad/i.test(userAgent)) {
+        device = "iPad";
+    } else if (/Android/i.test(userAgent)) {
+        device = /Mobile/i.test(userAgent)
+            ? "Android Mobile"
+            : "Android Tablet";
+    } else if (/Windows/i.test(userAgent)) {
+        device = "Windows Desktop";
+    } else if (/Macintosh|Mac OS X/i.test(userAgent)) {
+        device = "Mac Desktop";
+    } else if (/Linux/i.test(userAgent)) {
+        device = "Linux Desktop";
+    }
+
+    return {
+        ipAddress,
+        browser,
+        device,
+    };
 };
 
 /*
@@ -189,7 +270,12 @@ const changeLanguage = async (req, res) => {
             });
         }
 
-        // French requires OTP verification
+        /*
+        -------------------------------------------------
+        FRENCH REQUIRES OTP
+        -------------------------------------------------
+        */
+
         if (language === "fr") {
             return res.status(403).json({
                 message:
@@ -199,7 +285,12 @@ const changeLanguage = async (req, res) => {
         }
 
         const [userRows] = await db.query(
-            "SELECT preferred_language FROM users WHERE id = ?",
+            `
+            SELECT preferred_language
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            `,
             [userId]
         );
 
@@ -210,7 +301,17 @@ const changeLanguage = async (req, res) => {
         }
 
         const oldLanguage =
-            userRows[0].preferred_language || "en";
+            supportedLanguages.includes(
+                userRows[0].preferred_language
+            )
+                ? userRows[0].preferred_language
+                : "en";
+
+        /*
+        -------------------------------------------------
+        SAME LANGUAGE
+        -------------------------------------------------
+        */
 
         if (oldLanguage === language) {
             return res.status(200).json({
@@ -219,8 +320,18 @@ const changeLanguage = async (req, res) => {
             });
         }
 
+        /*
+        -------------------------------------------------
+        UPDATE LANGUAGE
+        -------------------------------------------------
+        */
+
         const [result] = await db.query(
-            "UPDATE users SET preferred_language = ? WHERE id = ?",
+            `
+            UPDATE users
+            SET preferred_language = ?
+            WHERE id = ?
+            `,
             [language, userId]
         );
 
@@ -230,23 +341,37 @@ const changeLanguage = async (req, res) => {
             });
         }
 
-        const userAgent =
-            req.headers["user-agent"] || "Unknown";
+        /*
+        -------------------------------------------------
+        CLIENT INFORMATION
+        -------------------------------------------------
+        */
 
-        const ipAddress =
-            req.headers["x-forwarded-for"]
-                ?.split(",")[0]
-                ?.trim() ||
-            req.socket.remoteAddress ||
-            "Unknown";
+        const {
+            ipAddress,
+            browser,
+            device,
+        } = getClientInformation(req);
 
-        const browser = userAgent;
-        const device = userAgent;
+        /*
+        -------------------------------------------------
+        AUDIT HISTORY
+        -------------------------------------------------
+        */
 
         await db.query(
-            `INSERT INTO language_change_history
-            (user_id, old_language, new_language, ip_address, browser, device)
-            VALUES (?, ?, ?, ?, ?, ?)`,
+            `
+            INSERT INTO language_change_history
+            (
+                user_id,
+                old_language,
+                new_language,
+                ip_address,
+                browser,
+                device
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            `,
             [
                 userId,
                 oldLanguage,
@@ -262,6 +387,7 @@ const changeLanguage = async (req, res) => {
                 "Language preference updated successfully.",
             language,
         });
+
     } catch (error) {
         console.error(
             "Change language error:",
@@ -286,9 +412,12 @@ const requestFrenchOtp = async (req, res) => {
         const userId = req.user.id;
 
         const [users] = await db.query(
-            `SELECT name, email, preferred_language
-             FROM users
-             WHERE id = ?`,
+            `
+            SELECT name, email, preferred_language
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            `,
             [userId]
         );
 
@@ -301,17 +430,19 @@ const requestFrenchOtp = async (req, res) => {
         const user = users[0];
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         60 SECOND RESEND COOLDOWN
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         const [recentOtps] = await db.query(
-            `SELECT created_at
-             FROM language_otps
-             WHERE user_id = ?
-             ORDER BY created_at DESC
-             LIMIT 1`,
+            `
+            SELECT created_at
+            FROM language_otps
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+            `,
             [userId]
         );
 
@@ -320,11 +451,10 @@ const requestFrenchOtp = async (req, res) => {
                 recentOtps[0].created_at
             );
 
-            const elapsedSeconds =
-                Math.floor(
-                    (Date.now() - createdAt.getTime()) /
-                    1000
-                );
+            const elapsedSeconds = Math.floor(
+                (Date.now() - createdAt.getTime()) /
+                1000
+            );
 
             if (elapsedSeconds < 60) {
                 const remainingSeconds =
@@ -340,9 +470,9 @@ const requestFrenchOtp = async (req, res) => {
         }
 
         /*
-        ---------------------------------------------
-        GENERATE NEW OTP
-        ---------------------------------------------
+        -------------------------------------------------
+        GENERATE SECURE OTP
+        -------------------------------------------------
         */
 
         const otp = crypto
@@ -354,26 +484,37 @@ const requestFrenchOtp = async (req, res) => {
         );
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         DELETE PREVIOUS OTP
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         await db.query(
-            "DELETE FROM language_otps WHERE user_id = ?",
+            `
+            DELETE FROM language_otps
+            WHERE user_id = ?
+            `,
             [userId]
         );
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         SAVE NEW OTP
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         await db.query(
-            `INSERT INTO language_otps
-            (user_id, otp, expires_at)
-            VALUES (?, ?, ?)`,
+            `
+            INSERT INTO language_otps
+            (
+                user_id,
+                otp,
+                expires_at,
+                attempts,
+                verified
+            )
+            VALUES (?, ?, ?, 0, 0)
+            `,
             [
                 userId,
                 otp,
@@ -382,9 +523,9 @@ const requestFrenchOtp = async (req, res) => {
         );
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         EMAIL LANGUAGE
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         const currentLanguage =
@@ -398,9 +539,9 @@ const requestFrenchOtp = async (req, res) => {
             otpEmailTranslations[currentLanguage];
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         SMTP
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         const transporter =
@@ -409,7 +550,10 @@ const requestFrenchOtp = async (req, res) => {
                 port: Number(
                     process.env.SMTP_PORT
                 ),
-                secure: false,
+                secure:
+                    Number(
+                        process.env.SMTP_PORT
+                    ) === 465,
                 auth: {
                     user: process.env.SMTP_USER,
                     pass: process.env.SMTP_PASS,
@@ -417,66 +561,86 @@ const requestFrenchOtp = async (req, res) => {
             });
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         SEND EMAIL
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
-        await transporter.sendMail({
-            from:
-                `"Internship Portal" <${process.env.SMTP_USER}>`,
-            to: user.email,
-            subject: emailText.subject,
+        try {
+            await transporter.sendMail({
+                from:
+                    `"Internship Portal" <${process.env.SMTP_USER}>`,
+                to: user.email,
+                subject: emailText.subject,
 
-            html: `
-                <div style="
-                    font-family: Arial, sans-serif;
-                    max-width: 600px;
-                    margin: auto;
-                    padding: 20px;
-                    line-height: 1.6;
-                ">
-
-                    <h2>
-                        ${emailText.title}
-                    </h2>
-
-                    <p>
-                        ${emailText.hello} ${user.name},
-                    </p>
-
-                    <p>
-                        ${emailText.request}
-                    </p>
-
-                    <p>
-                        ${emailText.otpText}
-                    </p>
-
-                    <h1 style="
-                        letter-spacing: 8px;
-                        text-align: center;
+                html: `
+                    <div style="
+                        font-family: Arial, sans-serif;
+                        max-width: 600px;
+                        margin: auto;
+                        padding: 20px;
+                        line-height: 1.6;
                     ">
-                        ${otp}
-                    </h1>
 
-                    <p>
-                        ${emailText.expiry}
-                    </p>
+                        <h2>
+                            ${emailText.title}
+                        </h2>
 
-                    <p>
-                        ${emailText.ignore}
-                    </p>
+                        <p>
+                            ${emailText.hello} ${user.name || "User"},
+                        </p>
 
-                    <p>
-                        ${emailText.regards},
-                        <br />
-                        ${emailText.team}
-                    </p>
+                        <p>
+                            ${emailText.request}
+                        </p>
 
-                </div>
-            `,
-        });
+                        <p>
+                            ${emailText.otpText}
+                        </p>
+
+                        <h1 style="
+                            letter-spacing: 8px;
+                            text-align: center;
+                        ">
+                            ${otp}
+                        </h1>
+
+                        <p>
+                            ${emailText.expiry}
+                        </p>
+
+                        <p>
+                            ${emailText.ignore}
+                        </p>
+
+                        <p>
+                            ${emailText.regards},
+                            <br />
+                            ${emailText.team}
+                        </p>
+
+                    </div>
+                `,
+            });
+
+        } catch (emailError) {
+            /*
+            ---------------------------------------------
+            IF EMAIL FAILS, REMOVE OTP
+            ---------------------------------------------
+            */
+
+            await db.query(
+                `
+                DELETE FROM language_otps
+                WHERE user_id = ?
+                AND otp = ?
+                `,
+                [userId, otp]
+            );
+
+            throw emailError;
+        }
 
         return res.status(200).json({
             message:
@@ -514,33 +678,69 @@ const verifyFrenchOtp = async (req, res) => {
             });
         }
 
+        /*
+        -------------------------------------------------
+        OTP FORMAT VALIDATION
+        -------------------------------------------------
+        */
+
+        if (!/^\d{6}$/.test(String(otp))) {
+            return res.status(400).json({
+                message:
+                    "OTP must be a valid 6-digit number.",
+            });
+        }
+
+        /*
+        -------------------------------------------------
+        IMPORTANT:
+        ONLY UNVERIFIED OTP CAN BE USED
+        -------------------------------------------------
+        */
+
         const [rows] = await db.query(
-            `SELECT *
-             FROM language_otps
-             WHERE user_id = ?
-             ORDER BY created_at DESC
-             LIMIT 1`,
+            `
+            SELECT *
+            FROM language_otps
+            WHERE user_id = ?
+              AND verified = 0
+            ORDER BY created_at DESC
+            LIMIT 1
+            `,
             [userId]
         );
 
         if (rows.length === 0) {
             return res.status(400).json({
                 message:
-                    "No OTP found. Please request a new OTP.",
+                    "No valid OTP found. Please request a new OTP.",
             });
         }
 
         const otpRecord = rows[0];
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
+        MAX ATTEMPTS
+        -------------------------------------------------
+        */
+
+        if (Number(otpRecord.attempts) >= 5) {
+            return res.status(429).json({
+                message:
+                    "Too many invalid attempts. Please request a new OTP.",
+            });
+        }
+
+        /*
+        -------------------------------------------------
         OTP EXPIRY
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         if (
-            new Date() >
-            new Date(otpRecord.expires_at)
+            new Date(otpRecord.expires_at).getTime() <=
+            Date.now()
         ) {
             return res.status(400).json({
                 message:
@@ -549,60 +749,66 @@ const verifyFrenchOtp = async (req, res) => {
         }
 
         /*
-        ---------------------------------------------
-        MAX ATTEMPTS
-        ---------------------------------------------
-        */
-
-        if (otpRecord.attempts >= 5) {
-            return res.status(429).json({
-                message:
-                    "Too many invalid attempts. Please request a new OTP.",
-            });
-        }
-
-        /*
-        ---------------------------------------------
+        -------------------------------------------------
         INVALID OTP
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
-        if (otp !== otpRecord.otp) {
+        if (String(otp) !== String(otpRecord.otp)) {
             await db.query(
-                `UPDATE language_otps
-                 SET attempts = attempts + 1
-                 WHERE id = ?`,
+                `
+                UPDATE language_otps
+                SET attempts = attempts + 1
+                WHERE id = ?
+                `,
                 [otpRecord.id]
             );
 
+            const newAttemptCount =
+                Number(otpRecord.attempts) + 1;
+
+            if (newAttemptCount >= 5) {
+                return res.status(429).json({
+                    message:
+                        "Too many invalid attempts. Please request a new OTP.",
+                });
+            }
+
             return res.status(400).json({
-                message: "Invalid OTP.",
+                message:
+                    `Invalid OTP. ${5 - newAttemptCount} attempts remaining.`,
             });
         }
 
         /*
-        ---------------------------------------------
-        VERIFY OTP
-        ---------------------------------------------
+        -------------------------------------------------
+        MARK OTP VERIFIED
+        -------------------------------------------------
         */
 
         await db.query(
-            `UPDATE language_otps
-             SET verified = TRUE
-             WHERE id = ?`,
+            `
+            UPDATE language_otps
+            SET verified = 1
+            WHERE id = ?
+              AND verified = 0
+            `,
             [otpRecord.id]
         );
 
         /*
-        ---------------------------------------------
-        GET OLD LANGUAGE
-        ---------------------------------------------
+        -------------------------------------------------
+        GET CURRENT LANGUAGE
+        -------------------------------------------------
         */
 
         const [users] = await db.query(
-            `SELECT preferred_language
-             FROM users
-             WHERE id = ?`,
+            `
+            SELECT preferred_language
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+            `,
             [userId]
         );
 
@@ -613,55 +819,72 @@ const verifyFrenchOtp = async (req, res) => {
         }
 
         const oldLanguage =
-            users[0].preferred_language || "en";
+            supportedLanguages.includes(
+                users[0].preferred_language
+            )
+                ? users[0].preferred_language
+                : "en";
 
         /*
-        ---------------------------------------------
-        CHANGE TO FRENCH
-        ---------------------------------------------
+        -------------------------------------------------
+        CHANGE LANGUAGE TO FRENCH
+        -------------------------------------------------
         */
 
         await db.query(
-            `UPDATE users
-             SET preferred_language = 'fr'
-             WHERE id = ?`,
+            `
+            UPDATE users
+            SET preferred_language = 'fr'
+            WHERE id = ?
+            `,
             [userId]
         );
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         AUDIT INFORMATION
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
-        const userAgent =
-            req.headers["user-agent"] || "Unknown";
+        const {
+            ipAddress,
+            browser,
+            device,
+        } = getClientInformation(req);
 
-        const ipAddress =
-            req.headers["x-forwarded-for"]
-                ?.split(",")[0]
-                ?.trim() ||
-            req.socket.remoteAddress ||
-            "Unknown";
+        /*
+        -------------------------------------------------
+        SAVE LANGUAGE CHANGE HISTORY
+        -------------------------------------------------
+        */
 
         await db.query(
-            `INSERT INTO language_change_history
-            (user_id, old_language, new_language, ip_address, browser, device)
-            VALUES (?, ?, ?, ?, ?, ?)`,
+            `
+            INSERT INTO language_change_history
+            (
+                user_id,
+                old_language,
+                new_language,
+                ip_address,
+                browser,
+                device
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            `,
             [
                 userId,
                 oldLanguage,
                 "fr",
                 ipAddress,
-                userAgent,
-                userAgent,
+                browser,
+                device,
             ]
         );
 
         /*
-        ---------------------------------------------
+        -------------------------------------------------
         SUCCESS
-        ---------------------------------------------
+        -------------------------------------------------
         */
 
         return res.status(200).json({
@@ -683,6 +906,7 @@ const verifyFrenchOtp = async (req, res) => {
 };
 
 module.exports = {
+    getUserLanguage,
     getLanguage,
     changeLanguage,
     requestFrenchOtp,

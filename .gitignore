@@ -22,3 +22,12 @@ yarn-error.log*
 .vscode/
 .idea/
 .DS_Store
+
+# Database backups - do not upload
+data_backup_*/
+
+# User uploads - do not upload private files
+backend/uploads/*
+
+# Keep the uploads folder in Git only if a safe placeholder is needed
+!backend/uploads/.gitkeep
