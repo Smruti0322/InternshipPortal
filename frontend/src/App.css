@@ -43,6 +43,55 @@ a {
   overflow-x: hidden;
 }
 
+.route-loading {
+  min-height: 45vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: #596579;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.route-loading-indicator {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #dbe5f2;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: route-loading-spin 0.8s linear infinite;
+}
+
+@keyframes route-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.route-not-found {
+  min-height: 70vh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.route-not-found p {
+  margin: 0;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.route-not-found h1 {
+  margin: 0 0 10px;
+  color: #111827;
+  font-size: clamp(24px, 5vw, 36px);
+}
+
 
 /* =========================================================
    NAVBAR
@@ -758,6 +807,10 @@ a {
 }
 
 .secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   background: #ffffff;
 
   border: 1px solid #dce2eb;
@@ -853,6 +906,13 @@ a {
   margin-bottom: 4px;
 
   border-bottom: 1px solid #edf0f4;
+}
+
+.opportunity-access-note {
+  margin: 18px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 .live-indicator {

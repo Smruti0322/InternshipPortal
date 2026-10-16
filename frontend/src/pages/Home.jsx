@@ -1,43 +1,50 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSelector from "../components/LanguageSelector";
-import "../App.css";
+import { API_BASE_URL } from "../config/api.js";
 
 function Home() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
-    const [user, setUser] = useState(null);
-
-    useEffect(() => {
+    const [user, setUser] = useState(() => {
         const savedUser = localStorage.getItem("user");
-
-        if (savedUser) {
-            try {
-                setUser(JSON.parse(savedUser));
-            } catch (error) {
-                console.error("Invalid user data");
-                localStorage.removeItem("user");
-            }
+        if (!savedUser) return null;
+        try {
+            return JSON.parse(savedUser);
+        } catch {
+            localStorage.removeItem("user");
+            return null;
         }
-    }, []);
+    });
 
     const closeMenu = () => {
         setMenuOpen(false);
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        localStorage.removeItem("language");
-
-        setUser(null);
-        setProfileOpen(false);
-        setMenuOpen(false);
-
-        window.location.href = "/login";
+    const handleLogout = async () => {
+        const token = localStorage.getItem("token");
+        try {
+            if (token) {
+                const response = await fetch(`${API_BASE_URL}/api/auth/sessions/logout`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!response.ok) console.error("Server session logout failed.");
+            }
+        } catch (error) {
+            console.error("Server session logout failed:", error.message);
+        } finally {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            setUser(null);
+            setProfileOpen(false);
+            setMenuOpen(false);
+            navigate("/login");
+        }
     };
 
     const getUserName = () => {
@@ -125,7 +132,7 @@ function Home() {
                                 onClick={closeMenu}
                                 className="nav-link"
                             >
-                                Subscriptions
+                                {t("common.subscriptionPlans")}
                             </Link>
 
                             <Link
@@ -292,9 +299,6 @@ function Home() {
                                     {t("home.dreamInternship")}
                                     {" "}
                                 </span>
-
-                                {t("home.andJob")}
-
                             </h1>
 
 
@@ -316,11 +320,13 @@ function Home() {
                                 </Link>
 
 
-                                <button className="secondary-btn">
-
-                                    {t("home.findJobs")}
-
-                                </button>
+                                <Link
+                                    to="/internships"
+                                    className="secondary-btn"
+                                    onClick={closeMenu}
+                                >
+                                    {t("home.viewAllOpportunities")}
+                                </Link>
 
 
                                 <Link
@@ -334,54 +340,6 @@ function Home() {
                             </div>
 
 
-                            <div className="hero-trust">
-
-                                <div className="trust-item">
-
-                                    <strong>
-                                        10K+
-                                    </strong>
-
-                                    <span>
-                                        {t("home.opportunities")}
-                                    </span>
-
-                                </div>
-
-
-                                <div className="trust-divider"></div>
-
-
-                                <div className="trust-item">
-
-                                    <strong>
-                                        5K+
-                                    </strong>
-
-                                    <span>
-                                        {t("home.students")}
-                                    </span>
-
-                                </div>
-
-
-                                <div className="trust-divider"></div>
-
-
-                                <div className="trust-item">
-
-                                    <strong>
-                                        500+
-                                    </strong>
-
-                                    <span>
-                                        {t("home.companies")}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
                         </div>
 
 
@@ -392,97 +350,15 @@ function Home() {
                             <div className="hero-card-header">
 
                                 <div className="live-indicator">
-
-                                    <span className="status-dot"></span>
-
-                                    <span>
-                                        {t("home.latestOpportunities")}
-                                    </span>
-
+                                    {t("home.latestOpportunities")}
                                 </div>
-
-                                <span className="live-badge">
-                                    {t("home.live")}
-                                </span>
 
                             </div>
 
 
-                            <div className="opportunity">
-
-                                <div className="company-logo react-logo">
-                                    R
-                                </div>
-
-                                <div className="opportunity-info">
-
-                                    <h4>
-                                        {t("home.reactDeveloperIntern")}
-                                    </h4>
-
-                                    <p>
-                                        {t("home.remote")} · ₹10,000/month
-                                    </p>
-
-                                </div>
-
-                                <span className="opportunity-arrow">
-                                    →
-                                </span>
-
-                            </div>
-
-
-                            <div className="opportunity">
-
-                                <div className="company-logo mern-logo">
-                                    M
-                                </div>
-
-                                <div className="opportunity-info">
-
-                                    <h4>
-                                        {t("home.mernDeveloper")}
-                                    </h4>
-
-                                    <p>
-                                        {t("home.hybrid")} · ₹15,000/month
-                                    </p>
-
-                                </div>
-
-                                <span className="opportunity-arrow">
-                                    →
-                                </span>
-
-                            </div>
-
-
-                            <div className="opportunity">
-
-                                <div className="company-logo frontend-logo">
-                                    A
-                                </div>
-
-                                <div className="opportunity-info">
-
-                                    <h4>
-                                        {t("home.frontendDeveloper")}
-                                    </h4>
-
-                                    <p>
-                                        {t("home.remote")} · ₹12,000/month
-                                    </p>
-
-                                </div>
-
-                                <span className="opportunity-arrow">
-                                    →
-                                </span>
-
-                            </div>
-
-
+                            <p className="opportunity-access-note">
+                                {t("home.opportunityAccessNote")}
+                            </p>
 
                             <Link
                                 to="/internships"
@@ -536,16 +412,16 @@ function Home() {
                             </div>
 
                             <h3>
-                                {t("home.verifiedOpportunities")}
+                                {t("home.openInternships")}
                             </h3>
 
                             <p>
-                                {t("home.verifiedDescription")}
+                                {t("home.openInternshipsDescription")}
                             </p>
 
-                            <a href="#internships">
+                            <Link to="/internships">
                                 {t("home.exploreOpportunities")} →
-                            </a>
+                            </Link>
 
                         </div>
 
@@ -589,9 +465,9 @@ function Home() {
                                 {t("home.growDescription")}
                             </p>
 
-                            <a href="#jobs">
+                            <Link to="/internships">
                                 {t("home.findYourOpportunity")} →
-                            </a>
+                            </Link>
 
                         </div>
 

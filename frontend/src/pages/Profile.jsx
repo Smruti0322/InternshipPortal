@@ -4,16 +4,28 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "../App.css";
 import "./Profile.css";
+import { API_BASE_URL } from "../config/api.js";
 
-const API_BASE_URL = "http://localhost:5000";
+
 
 function Profile() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
 
-    const [user, setUser] = useState(null);
+    const [user] = useState(() => {
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) return null;
+        try {
+            return JSON.parse(storedUser);
+        } catch (error) {
+            console.error("Invalid user data:", error);
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+            return null;
+        }
+    });
     const [loginHistory, setLoginHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const loading = !user;
     const [historyLoading, setHistoryLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -21,6 +33,7 @@ function Profile() {
     const [sessionsLoading, setSessionsLoading] = useState(true);
     const [sessionsError, setSessionsError] = useState("");
     const [signingOutOthers, setSigningOutOthers] = useState(false);
+    const [revokingSessionId, setRevokingSessionId] = useState(null);
     const [sessionMessage, setSessionMessage] = useState("");
 
     // Subscription state
@@ -29,24 +42,8 @@ function Profile() {
     const [subscriptionError, setSubscriptionError] = useState("");
 
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-
-        if (!storedUser) {
-            navigate("/login");
-            return;
-        }
-
-        try {
-            setUser(JSON.parse(storedUser));
-        } catch (err) {
-            console.error("Invalid user data:", err);
-            localStorage.removeItem("user");
-            localStorage.removeItem("token");
-            navigate("/login");
-        } finally {
-            setLoading(false);
-        }
-    }, [navigate]);
+        if (!user) navigate("/login", { replace: true });
+    }, [navigate, user]);
 
     useEffect(() => {
         const fetchLoginHistory = async () => {
@@ -173,7 +170,9 @@ function Profile() {
 
                 if (!response.ok) {
                     throw new Error(
-                        data.message || "Unable to load subscription."
+                        t("profile.subscriptionLoadError", {
+                            defaultValue: "Unable to load subscription.",
+                        })
                     );
                 }
 
@@ -182,7 +181,9 @@ function Profile() {
             } catch (err) {
                 console.error("Subscription fetch error:", err);
                 setSubscriptionError(
-                    err.message || "Unable to load subscription details."
+                    t("profile.subscriptionLoadDetailsError", {
+                        defaultValue: "Unable to load subscription details.",
+                    })
                 );
             } finally {
                 setSubscriptionLoading(false);
@@ -206,10 +207,51 @@ function Profile() {
 
     const getInitial = () => getUserName().charAt(0).toUpperCase();
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        navigate("/login");
+    const handleLogout = async () => {
+        const token = localStorage.getItem("token");
+        try {
+            if (token) {
+                await fetch(`${API_BASE_URL}/api/auth/sessions/logout`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+            }
+        } catch (logoutError) {
+            console.error("Server session logout failed:", logoutError.message);
+        } finally {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            navigate("/login");
+        }
+    };
+
+    const handleRevokeSession = async (sessionId) => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/login");
+            return;
+        }
+
+        setRevokingSessionId(sessionId);
+        setSessionsError("");
+        setSessionMessage("");
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/sessions/${sessionId}/revoke`,
+                { method: "POST", headers: { Authorization: `Bearer ${token}` } }
+            );
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || t("profile.unableRevokeSession"));
+            }
+            setSessions((current) => current.filter((session) => Number(session.id) !== Number(sessionId)));
+            setSessionMessage(t("profile.sessionRevoked"));
+        } catch (revokeError) {
+            console.error("Revoke session error:", revokeError);
+            setSessionsError(revokeError.message || t("profile.unableRevokeSession"));
+        } finally {
+            setRevokingSessionId(null);
+        }
     };
 
     const handleSignOutOtherDevices = async () => {
@@ -287,7 +329,9 @@ function Profile() {
 
         if (Number.isNaN(date.getTime())) return dateValue;
 
-        return date.toLocaleString();
+        return date.toLocaleString(i18n.language, {
+            timeZone: "Asia/Kolkata",
+        });
     };
 
     const formatSubscriptionDate = (dateValue) => {
@@ -297,7 +341,7 @@ function Profile() {
 
         if (Number.isNaN(date.getTime())) return "-";
 
-        return date.toLocaleDateString("en-IN", {
+        return date.toLocaleDateString(i18n.language, {
             day: "2-digit",
             month: "short",
             year: "numeric",
@@ -327,14 +371,58 @@ function Profile() {
         return "default";
     };
 
+    const getTranslatedStatus = (status) => {
+        const normalized = String(status || "")
+            .trim()
+            .toLowerCase()
+            .replace(/[\s-]+/g, "_");
+
+        const statusKeys = {
+            active: "profile.statusActive",
+            success: "profile.statusSuccess",
+            failed: "profile.statusFailed",
+            logged_out: "profile.statusLoggedOut",
+            logout: "profile.statusLoggedOut",
+            cancelled: "profile.statusCancelled",
+            canceled: "profile.statusCancelled",
+            expired: "profile.statusExpired",
+            pending: "profile.statusPending",
+            inactive: "profile.statusInactive",
+            otp_required: "profile.statusOtpRequired",
+            unknown: "profile.statusUnknown",
+        };
+
+        const key = statusKeys[normalized];
+
+        return key
+            ? t(key, { defaultValue: status || t("profile.statusUnknown") })
+            : status || t("profile.statusUnknown");
+    };
+
+    const getTranslatedDevice = (deviceType) => {
+        const normalized = String(deviceType || "").toLowerCase();
+
+        if (normalized === "mobile") {
+            return t("profile.deviceTypeMobile");
+        }
+
+        if (normalized === "desktop") {
+            return t("profile.deviceTypeDesktop");
+        }
+
+        return deviceType || "-";
+    };
+
     const getDeviceLabel = (session) => {
         if (!session) return t("profile.unknownDevice");
 
+        const deviceType = getTranslatedDevice(session.device_type);
+
         if (session.device_model) {
-            return `${session.device_type || t("profile.device")} • ${session.device_model}`;
+            return `${deviceType} • ${session.device_model}`;
         }
 
-        return session.device_type || t("profile.device");
+        return deviceType;
     };
 
     if (loading) {
@@ -422,9 +510,12 @@ function Profile() {
                                         )}
                                     </span>
 
-                                    <h3>
-                                        {subscription.plan_name || "Free"}
-                                    </h3>
+                                            <h3>
+                                                {subscription.plan_name?.toLowerCase() === "free"
+                                                    ? t("profile.freePlan")
+                                                    : subscription.plan_name || t("profile.freePlan")}
+                                            </h3>
+
                                 </div>
 
                                 <span
@@ -432,7 +523,7 @@ function Profile() {
                                         subscription.status || "active"
                                     ).toLowerCase()}`}
                                 >
-                                    {subscription.status || "Active"}
+                                            {getTranslatedStatus(subscription.status || "active")}
                                 </span>
                             </div>
 
@@ -588,7 +679,7 @@ function Profile() {
                                                         : ""}
                                                 </td>
                                                 <td>
-                                                    {item.device_type || "-"}
+                                                    {getTranslatedDevice(item.device_type)}
                                                 </td>
                                                 <td>
                                                     {item.ip_address || "-"}
@@ -599,8 +690,7 @@ function Profile() {
                                                             item.login_status
                                                         )}`}
                                                     >
-                                                        {item.login_status ||
-                                                            t("profile.login")}
+                                                        {getTranslatedStatus(item.login_status || "unknown")}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -643,7 +733,7 @@ function Profile() {
                                                 {t("profile.device")}
                                             </span>
                                             <strong>
-                                                {item.device_type || "-"}
+                                                {getTranslatedDevice(item.device_type)}
                                             </strong>
                                         </div>
 
@@ -665,8 +755,7 @@ function Profile() {
                                                     item.login_status
                                                 )}`}
                                             >
-                                                {item.login_status ||
-                                                    t("profile.login")}
+                                                {getTranslatedStatus(item.login_status || "unknown")}
                                             </span>
                                         </div>
                                     </div>
@@ -798,6 +887,18 @@ function Profile() {
                                                     )}
                                                 </span>
                                             </div>
+                                            {!session.is_current && (
+                                                <button
+                                                    type="button"
+                                                    className="revoke-session-button"
+                                                    onClick={() => handleRevokeSession(session.id)}
+                                                    disabled={revokingSessionId === session.id}
+                                                >
+                                                    {revokingSessionId === session.id
+                                                        ? t("profile.revokingSession")
+                                                        : t("profile.revokeSession")}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

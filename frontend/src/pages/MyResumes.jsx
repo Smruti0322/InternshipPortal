@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../hooks/useToast";
 
 import { useTranslation } from "react-i18next";
 
 import "./MyResumes.css";
+import { API_BASE_URL } from "../config/api.js";
 
 const isPersistentImageData = (value) =>
     typeof value === "string" &&
@@ -31,7 +32,7 @@ function MyResumes() {
         Authorization: `Bearer ${ localStorage.getItem("token") || "" } `,
     };
 
-    const fetchResumes = async () => {
+    const fetchResumes = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
@@ -45,7 +46,7 @@ function MyResumes() {
             }
 
             const response = await fetch(
-                "http://localhost:5000/api/resumes",
+                `${API_BASE_URL}/api/resumes`,
                 {
                     method: "GET",
                     headers: {
@@ -83,11 +84,12 @@ function MyResumes() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
 
     useEffect(() => {
-        fetchResumes();
-    }, []);
+        const initialLoad = window.setTimeout(() => fetchResumes(), 0);
+        return () => window.clearTimeout(initialLoad);
+    }, [fetchResumes]);
 
     const handleDelete = async (id) => {
         const confirmed = window.confirm(
@@ -100,7 +102,7 @@ function MyResumes() {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/resumes/${id}`,
+                `${API_BASE_URL}/api/resumes/${id}`,
 {
     method: "DELETE",
         headers: authHeaders,
@@ -142,7 +144,7 @@ showToast(
 const handleSetDefault = async (id) => {
     try {
         const response = await fetch(
-            `http://localhost:5000/api/resumes/${id}/default`,
+            `${API_BASE_URL}/api/resumes/${id}/default`,
             {
                 method: "PUT",
                 headers: authHeaders,

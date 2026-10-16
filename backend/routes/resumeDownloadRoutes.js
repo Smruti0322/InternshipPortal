@@ -163,18 +163,16 @@ router.post("/request-otp", async (req, res) => {
             (
                 user_id,
                 resume_id,
-                email,
                 otp,
                 created_at,
                 expires_at,
                 verified
             )
-            VALUES (?, ?, ?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE), 0)
+            VALUES (?, ?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE), 0)
             `,
             [
                 userId,
                 resume_id,
-                resumeEmail,
                 otp,
             ]
         );
@@ -373,6 +371,12 @@ router.post("/verify-otp", async (req, res) => {
             return res.status(400).json({ success: false, message: "This OTP was invalidated. Request a new OTP." });
         }
 
+        if (Number(otpRecord.attempts || 0) >= 5) {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(429).json({ success: false, message: "Too many invalid attempts. Request a new OTP." });
+        }
+
         // ---------------------------------------------
         // CHECK EXPIRY
         // ---------------------------------------------
@@ -395,11 +399,10 @@ router.post("/verify-otp", async (req, res) => {
             String(otpRecord.otp).trim() !==
             String(otp).trim()
         ) {
-            // Retain the row for rate limiting but disallow further guesses.
-            await connection.query("UPDATE resume_otps SET verified = 2 WHERE id = ? AND verified = 0", [otpRecord.id]);
+            await connection.query("UPDATE resume_otps SET attempts = attempts + 1 WHERE id = ? AND verified = 0", [otpRecord.id]);
             await connection.commit();
             transactionStarted = false;
-            return res.status(400).json({
+            return res.status(Number(otpRecord.attempts || 0) + 1 >= 5 ? 429 : 400).json({
                 success: false,
                 message:
                     "Invalid OTP. Please try again.",

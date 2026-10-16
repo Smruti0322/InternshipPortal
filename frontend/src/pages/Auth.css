@@ -210,7 +210,7 @@
 .auth-language .language-select {
   min-width: 135px;
   height: 42px;
-
+  margin-top: 80px;
   padding: 0 38px 0 14px;
 
   border: 1px solid #d0d5dd;

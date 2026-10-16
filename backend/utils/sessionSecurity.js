@@ -161,6 +161,7 @@ const getActiveSession = async (token) => {
         FROM user_sessions
         WHERE session_token_hash = ?
           AND is_active = 1
+          AND last_activity_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
         LIMIT 1
         `,
         [sessionTokenHash]
@@ -226,6 +227,7 @@ const getUserActiveSessions = async (
         FROM user_sessions
         WHERE user_id = ?
           AND is_active = 1
+          AND last_activity_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)
         ORDER BY last_activity_at DESC
         `,
         [userId]

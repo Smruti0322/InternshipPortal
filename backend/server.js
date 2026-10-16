@@ -32,6 +32,11 @@ const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const internshipRoutes = require("./routes/internshipRoutes");
 const app = express();
 
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 
 // =========================================================
 // TASK 5 : LOGIN SECURITY
@@ -42,23 +47,38 @@ const app = express();
 // For local development this does not break anything.
 // =========================================================
 
-app.set("trust proxy", true);
+app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || 0));
 
 
 // =========================================================
 // MIDDLEWARE
 // =========================================================
 
-app.use(cors());
+app.use(cors({
+    origin(origin, callback) {
+        // Allow server-to-server and same-origin requests without an Origin header.
+        return callback(null, !origin || allowedOrigins.includes(origin));
+    },
+    credentials: true,
+}));
 
-app.use(
-    "/uploads",
-    express.static(
-        path.join(__dirname, "uploads")
-    )
-);
+// Community media is public content in the feed; serve only that upload folder
+// with safe response headers. Other upload folders are never exposed statically.
+app.use("/uploads/community", express.static(
+    path.join(__dirname, "uploads", "community"),
+    {
+        dotfiles: "deny",
+        index: false,
+        setHeaders(res) {
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+        },
+    }
+));
 
 app.use(express.json());
+
+app.disable("x-powered-by");
 
 
 // =========================================================
@@ -113,8 +133,10 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(
         `Server running on port ${PORT}`
     );
 });
+
+module.exports = app;

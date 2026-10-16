@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,8 +22,9 @@ import {
 } from "lucide-react";
 
 import "./Community.css";
+import { API_BASE_URL } from "../config/api.js";
 
-const API_BASE_URL = "http://localhost:5000";
+
 
 function Community() {
   const navigate = useNavigate();
@@ -67,7 +68,6 @@ function Community() {
   // MENTION
   // =========================================================
 
-  const [mentionQuery, setMentionQuery] = useState("");
   const [mentionUsers, setMentionUsers] = useState([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
 
@@ -128,9 +128,9 @@ function Community() {
   // TOKEN
   // =========================================================
 
-  const getToken = () => {
+  const getToken = useCallback(() => {
     return localStorage.getItem("token");
-  };
+  }, []);
 
   const getCurrentUserId = () => {
     try {
@@ -161,18 +161,18 @@ function Community() {
   // UNAUTHORIZED
   // =========================================================
 
-  const handleUnauthorized = () => {
+  const handleUnauthorized = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
-    window.location.href = "/login";
-  };
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
   // =========================================================
   // SAFE JSON RESPONSE
   // =========================================================
 
-  const getResponseData = async (response) => {
+  const getResponseData = useCallback(async (response) => {
     const contentType = response.headers.get("content-type") || "";
 
     if (!contentType.toLowerCase().includes("application/json")) {
@@ -196,19 +196,19 @@ function Community() {
         message: t("community.unableReadResponse"),
       };
     }
-  };
+  }, [t]);
 
   // =========================================================
   // AUTH HEADERS
   // =========================================================
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     const token = getToken();
 
     return {
       Authorization: token ? `Bearer ${token}` : "",
     };
-  };
+  }, [getToken]);
 
   // =========================================================
   // NOTIFICATIONS
@@ -258,7 +258,7 @@ function Community() {
     }
   };
 
-  const loadUnreadNotificationCount = async () => {
+  const loadUnreadNotificationCount = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -288,7 +288,7 @@ function Community() {
     } catch (error) {
       console.error("Load Unread Notification Count Error:", error);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   const markNotificationAsRead = async (notificationId) => {
     try {
@@ -392,7 +392,7 @@ function Community() {
   // LOAD POSTS
   // =========================================================
 
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -424,13 +424,13 @@ function Community() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // LOAD POSTING LIMIT
   // =========================================================
 
-  const loadPostingLimit = async () => {
+  const loadPostingLimit = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -479,7 +479,7 @@ function Community() {
     } catch (error) {
       console.error("Load Posting Limit Error:", error);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // HASHTAG FILTER
@@ -580,7 +580,7 @@ function Community() {
   // LOAD RECEIVED FRIEND REQUESTS
   // =========================================================
 
-  const loadFriendRequests = async () => {
+  const loadFriendRequests = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -608,13 +608,13 @@ function Community() {
     } catch (error) {
       console.error("Load Friend Requests Error:", error);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // LOAD SENT FRIEND REQUESTS
   // =========================================================
 
-  const loadSentRequests = async () => {
+  const loadSentRequests = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -642,13 +642,13 @@ function Community() {
     } catch (error) {
       console.error("Load Sent Requests Error:", error);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // LOAD FRIENDS
   // =========================================================
 
-  const loadFriends = async () => {
+  const loadFriends = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -673,13 +673,13 @@ function Community() {
     } catch (error) {
       console.error("Load Friends Error:", error);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // LOAD FOLLOWERS
   // =========================================================
 
-  const loadFollowers = async () => {
+  const loadFollowers = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -711,13 +711,13 @@ function Community() {
     } finally {
       setFollowersLoading(false);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // LOAD FOLLOWING
   // =========================================================
 
-  const loadFollowing = async () => {
+  const loadFollowing = useCallback(async () => {
     try {
       const token = getToken();
 
@@ -749,51 +749,33 @@ function Community() {
     } finally {
       setFollowingLoading(false);
     }
-  };
+  }, [getToken, getAuthHeaders, handleUnauthorized, getResponseData]);
 
   // =========================================================
   // INITIAL LOAD
   // =========================================================
 
   useEffect(() => {
-    loadPosts();
-    loadPostingLimit();
-    loadFriendRequests();
-    loadSentRequests();
-    loadFriends();
-    loadFollowers();
-    loadFollowing();
-    loadUnreadNotificationCount();
+    const initialLoad = window.setTimeout(() => {
+      loadPosts();
+      loadPostingLimit();
+      loadFriendRequests();
+      loadSentRequests();
+      loadFriends();
+      loadFollowers();
+      loadFollowing();
+      loadUnreadNotificationCount();
+    }, 0);
 
     const interval = setInterval(() => {
       loadUnreadNotificationCount();
     }, 30000);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  // =========================================================
-  // AUTOMATIC USER SEARCH
-  // =========================================================
-
-  useEffect(() => {
-    const query = searchText.trim();
-
-    if (!query) {
-      searchRequestRef.current += 1;
-      setUsers([]);
-      setSearchingUsers(false);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      handleUserSearch(query);
-    }, 400);
-
     return () => {
-      clearTimeout(timer);
+      window.clearTimeout(initialLoad);
+      clearInterval(interval);
     };
-  }, [searchText]);
+  }, [loadPosts, loadPostingLimit, loadFriendRequests, loadSentRequests, loadFriends, loadFollowers, loadFollowing, loadUnreadNotificationCount]);
 
   // =========================================================
   // HANDLE POST CONTENT CHANGE
@@ -811,15 +793,12 @@ function Community() {
     const match = textBeforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_.-]*)$/);
 
     if (!match) {
-      setMentionQuery("");
       setMentionUsers([]);
       setShowMentionSuggestions(false);
       return;
     }
 
     const query = match[1];
-
-    setMentionQuery(query);
 
     if (!query) {
       setMentionUsers([]);
@@ -867,7 +846,6 @@ function Community() {
 
     setContent(newContent);
 
-    setMentionQuery("");
     setMentionUsers([]);
     setShowMentionSuggestions(false);
 
@@ -1504,7 +1482,7 @@ function Community() {
   // SEARCH USERS
   // =========================================================
 
-  const handleUserSearch = async (query = searchText) => {
+  const handleUserSearch = useCallback(async (query = searchText) => {
     const searchQuery = query.trim();
 
     const requestId = ++searchRequestRef.current;
@@ -1566,7 +1544,32 @@ function Community() {
         setSearchingUsers(false);
       }
     }
-  };
+  }, [searchText, getToken, handleUnauthorized, getAuthHeaders, getResponseData]);
+
+  // =========================================================
+  // AUTOMATIC USER SEARCH
+  // =========================================================
+
+  useEffect(() => {
+    const query = searchText.trim();
+
+    if (!query) {
+      searchRequestRef.current += 1;
+      const resetSearch = window.setTimeout(() => {
+        setUsers([]);
+        setSearchingUsers(false);
+      }, 0);
+      return () => window.clearTimeout(resetSearch);
+    }
+
+    const timer = setTimeout(() => {
+      handleUserSearch(query);
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchText, handleUserSearch]);
 
   // =========================================================
   // SEARCH USERS FOR @MENTION

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./Auth.css";
+import { API_BASE_URL } from "../config/api.js";
 
-const API_URL = "http://localhost:5000";
+const API_URL = API_BASE_URL;
 
 function ForgotPassword() {
 
@@ -36,13 +37,6 @@ function ForgotPassword() {
             return;
         }
 
-        if (method !== "email") {
-            setError(
-                t("forgotPassword.emailOtpAvailable")
-            );
-            return;
-        }
-
         try {
             setLoading(true);
             setError("");
@@ -59,7 +53,7 @@ function ForgotPassword() {
 
                     body: JSON.stringify({
                         identifier: identifier.trim(),
-                        method: "email",
+                        method,
                     }),
                 }
             );
@@ -564,6 +558,10 @@ function ForgotPassword() {
 
                                         <option value="email">
                                             {t("common.email")}
+                                        </option>
+
+                                        <option value="phone" disabled>
+                                            {t("common.phoneNumber")} — SMS provider not configured
                                         </option>
 
                                     </select>

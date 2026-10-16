@@ -1,8 +1,10 @@
 const {
     getActiveSession,
     getUserActiveSessions,
-    logoutOtherSessions
+    logoutOtherSessions,
+    logoutSession
 } = require("../utils/sessionSecurity");
+const db = require("../config/db");
 
 
 // =========================================================
@@ -171,8 +173,50 @@ const signOutOtherDevices = async (
     }
 };
 
+const revokeSession = async (req, res) => {
+    const sessionId = Number(req.params.sessionId);
+    if (!Number.isInteger(sessionId) || sessionId <= 0) {
+        return res.status(400).json({ success: false, message: "Invalid session ID." });
+    }
+
+    try {
+        // The owner predicate is part of the mutation so another user's
+        // session ID can never revoke their session.
+        const [result] = await db.execute(
+            `UPDATE user_sessions
+             SET is_active = 0, logout_at = NOW()
+             WHERE id = ? AND user_id = ? AND is_active = 1`,
+            [sessionId, req.user.id]
+        );
+        if (!result.affectedRows) {
+            return res.status(404).json({ success: false, message: "Active session not found for this account." });
+        }
+
+        return res.status(200).json({ success: true, revoked_session_id: sessionId });
+    } catch (error) {
+        console.error("Revoke session error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to revoke this session." });
+    }
+};
+
+const logoutCurrentSession = async (req, res) => {
+    try {
+        const session = await getActiveSession(req.token);
+        if (!session || Number(session.user_id) !== Number(req.user.id)) {
+            return res.status(401).json({ success: false, message: "Current session is no longer active." });
+        }
+        await logoutSession(session.id);
+        return res.status(200).json({ success: true, message: "Signed out successfully." });
+    } catch (error) {
+        console.error("Logout current session error:", error.message);
+        return res.status(500).json({ success: false, message: "Unable to sign out." });
+    }
+};
+
 
 module.exports = {
     getActiveSessions,
-    signOutOtherDevices
+    signOutOtherDevices,
+    revokeSession,
+    logoutCurrentSession
 };

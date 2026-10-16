@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSelector from "../components/LanguageSelector";
 import "./Auth.css";
+import { API_BASE_URL } from "../config/api.js";
 
-const API_URL = "http://localhost:5000";
+const API_URL = API_BASE_URL;
 
 // =================================================
 // PROFESSIONAL EYE ICON

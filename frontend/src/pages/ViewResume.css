@@ -139,7 +139,7 @@
 ========================================================= */
 
 .resume-preview {
-  /* width: 210mm; */
+  width: 210mm;
   min-height: 297mm;
 
   margin: 0 auto;
@@ -937,6 +937,7 @@
   }
 
   .resume-preview {
+    width: 100%;
     margin: 0 auto;
   }
 }
@@ -981,7 +982,7 @@
 
 @media (max-width: 600px) {
   .resume-preview {
-    width: 100%;
+    width: 210mm;
     min-height: auto;
 
     margin: 0 auto;
@@ -1051,8 +1052,6 @@
     ----------------------------------------------------- */
 
   .resume-preview {
-    /* width: 210mm; */
-
     min-height: 297mm;
 
     margin: 0 auto;
@@ -1162,7 +1161,7 @@
 
 @media (max-width: 520px) {
   .resume-preview {
-    zoom: 0.64;
+    zoom: 0.62;
   }
 }
 
@@ -1180,7 +1179,7 @@
   }
 
   .resume-preview {
-    zoom: 0.57;
+    zoom: 0.54;
   }
 
   .resume-profile-photo {
@@ -1209,7 +1208,7 @@
   }
 
   .resume-preview {
-    zoom: 0.5;
+    zoom: 0.48;
   }
 
   .resume-profile-photo {
@@ -1246,7 +1245,7 @@
   }
 
   .resume-preview {
-    zoom: 0.45;
+    zoom: 0.44;
   }
 
   .view-resume-toolbar {

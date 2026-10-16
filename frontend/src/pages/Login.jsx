@@ -5,8 +5,9 @@ import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import LanguageSelector from "../components/LanguageSelector";
 import "./Auth.css";
+import { API_BASE_URL } from "../config/api.js";
 
-const API_URL = "http://localhost:5000";
+const API_URL = API_BASE_URL;
 
 // =================================================
 // PROFESSIONAL EYE ICON
@@ -1023,8 +1024,7 @@ function Login() {
                                         "#111827",
                                 }}
                             >
-                                Login Verification
-                            </h3>
+                                {t("login.otpTitle")}                            </h3>
 
                             <p
                                 style={{
@@ -1037,9 +1037,7 @@ function Login() {
                                         "1.6",
                                 }}
                             >
-                                A verification OTP has been
-                                sent to your registered email.
-                            </p>
+                                {t("login.otpDescription")}                            </p>
 
                         </div>
 
@@ -1095,8 +1093,7 @@ function Login() {
                                         "#374151",
                                 }}
                             >
-                                Enter 6-digit OTP
-                            </label>
+                                {t("login.enterOtp")}                            </label>
 
                             <input
                                 type="text"
@@ -1119,7 +1116,7 @@ function Login() {
                                     setOtp(value);
                                     setOtpError("");
                                 }}
-                                placeholder="Enter OTP"
+                                placeholder={t("login.otpPlaceholder")}
                                 disabled={
                                     otpLoading
                                 }
@@ -1240,8 +1237,8 @@ function Login() {
                             }}
                         >
                             {otpLoading
-                                ? "Verifying..."
-                                : "Verify OTP"}
+                                ? t("login.verifyingOtp")
+                                : t("login.verifyOtp")}
                         </button>
 
 
@@ -1284,8 +1281,8 @@ function Login() {
                             }}
                         >
                             {otpLoading
-                                ? "Sending..."
-                                : "Resend OTP"}
+                                ? t("login.sendingOtp")
+                                : t("login.resendOtp")}
                         </button>
 
 
@@ -1320,7 +1317,7 @@ function Login() {
                                         : "pointer",
                             }}
                         >
-                            Cancel
+                            {t("common.cancel")}
                         </button>
 
                     </div>

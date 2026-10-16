@@ -298,6 +298,7 @@ const login = async (req, res) => {
       console.log("User session created:", sessionId);
     } catch (sessionError) {
       console.error("USER SESSION CREATE ERROR:", sessionError);
+      throw sessionError;
     }
 
     // =====================================================

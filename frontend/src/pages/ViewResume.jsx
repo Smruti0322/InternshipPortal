@@ -1,9 +1,37 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useToast } from "../context/ToastContext";
+import { useToast } from "../hooks/useToast";
 import { useTranslation } from "react-i18next";
 import jsPDF from "jspdf";
 import "./ViewResume.css";
+import { API_BASE_URL } from "../config/api.js";
+
+
+const loadPdfFont = async (pdf, fileName, fontName) => {
+    const response = await fetch(`/fonts/${fileName}`);
+
+    if (!response.ok) {
+        throw new Error(`Font file not found: ${fileName}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    let binary = "";
+    const chunkSize = 0x8000;
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(
+            ...bytes.subarray(i, i + chunkSize)
+        );
+    }
+
+    const base64 = btoa(binary);
+
+    pdf.addFileToVFS(`${fontName}.ttf`, base64);
+    pdf.addFont(`${fontName}.ttf`, fontName, "normal");
+};
+
 
 const DEFAULT_SECTION_ORDER = [
     "careerObjective",
@@ -57,6 +85,144 @@ const isPersistentImageData = (value) =>
         value
     );
 
+
+const RESUME_LABELS = {
+    en: {
+        careerObjective: "Career Objective",
+        education: "Education",
+        skills: "Skills",
+        experience: "Work Experience",
+        internships: "Internships",
+        projects: "Projects",
+        certifications: "Certifications",
+        achievements: "Achievements",
+        languages: "Languages",
+        socialLinks: "Social Links",
+        references: "References",
+        linkedin: "LinkedIn",
+        github: "GitHub",
+        portfolio: "Portfolio",
+        email: "Email",
+        phone: "Phone",
+        address: "Address",
+        technologies: "Technologies",
+    },
+    hi: {
+        careerObjective: "करियर उद्देश्य",
+        education: "शिक्षा",
+        skills: "कौशल",
+        experience: "कार्य अनुभव",
+        internships: "इंटर्नशिप",
+        projects: "प्रोजेक्ट",
+        certifications: "प्रमाणपत्र",
+        achievements: "उपलब्धियाँ",
+        languages: "भाषाएँ",
+        socialLinks: "सोशल लिंक",
+        references: "संदर्भ",
+        linkedin: "लिंक्डइन",
+        github: "गिटहब",
+        portfolio: "पोर्टफोलियो",
+        email: "ईमेल",
+        phone: "फोन",
+        address: "पता",
+        technologies: "तकनीकें",
+    },
+    fr: {
+        careerObjective: "Objectif professionnel",
+        education: "Formation",
+        skills: "Compétences",
+        experience: "Expérience professionnelle",
+        internships: "Stages",
+        projects: "Projets",
+        certifications: "Certifications",
+        achievements: "Réalisations",
+        languages: "Langues",
+        socialLinks: "Liens sociaux",
+        references: "Références",
+        linkedin: "LinkedIn",
+        github: "GitHub",
+        portfolio: "Portfolio",
+        email: "E-mail",
+        phone: "Téléphone",
+        address: "Adresse",
+        technologies: "Technologies",
+    },
+    es: {
+        careerObjective: "Objetivo profesional",
+        education: "Educación",
+        skills: "Habilidades",
+        experience: "Experiencia laboral",
+        internships: "Prácticas",
+        projects: "Proyectos",
+        certifications: "Certificaciones",
+        achievements: "Logros",
+        languages: "Idiomas",
+        socialLinks: "Enlaces sociales",
+        references: "Referencias",
+        linkedin: "LinkedIn",
+        github: "GitHub",
+        portfolio: "Portafolio",
+        email: "Correo electrónico",
+        phone: "Teléfono",
+        address: "Dirección",
+        technologies: "Tecnologías",
+    },
+    pt: {
+        careerObjective: "Objetivo profissional",
+        education: "Educação",
+        skills: "Competências",
+        experience: "Experiência profissional",
+        internships: "Estágios",
+        projects: "Projetos",
+        certifications: "Certificações",
+        achievements: "Conquistas",
+        languages: "Idiomas",
+        socialLinks: "Links sociais",
+        references: "Referências",
+        linkedin: "LinkedIn",
+        github: "GitHub",
+        portfolio: "Portfólio",
+        email: "E-mail",
+        phone: "Telefone",
+        address: "Endereço",
+        technologies: "Tecnologias",
+    },
+    zh: {
+        careerObjective: "职业目标",
+        education: "教育经历",
+        skills: "技能",
+        experience: "工作经验",
+        internships: "实习经历",
+        projects: "项目",
+        certifications: "证书",
+        achievements: "成就",
+        languages: "语言",
+        socialLinks: "社交链接",
+        references: "推荐人",
+        linkedin: "领英",
+        github: "GitHub",
+        portfolio: "作品集",
+        email: "电子邮件",
+        phone: "电话",
+        address: "地址",
+        technologies: "技术",
+    },
+};
+
+const normalizeResumeLanguage = (value) => {
+    const language = String(value || "en")
+        .trim()
+        .toLowerCase()
+        .split("-")[0];
+
+    return Object.prototype.hasOwnProperty.call(
+        RESUME_LABELS,
+        language
+    )
+        ? language
+        : "en";
+};
+
 function ViewResume() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -64,6 +230,13 @@ function ViewResume() {
     const { t } = useTranslation();
 
     const [resume, setResume] = useState(null);
+
+    const resumeLanguage = normalizeResumeLanguage(
+        resume?.resume_language ?? resume?.resumeLanguage
+    );
+
+    const resumeLabels = RESUME_LABELS[resumeLanguage];
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [downloading, setDownloading] = useState(false);
@@ -79,7 +252,6 @@ function ViewResume() {
     const [resendSeconds, setResendSeconds] = useState(0);
 
     const [paymentLoading, setPaymentLoading] = useState(false);
-    const [hasPaid, setHasPaid] = useState(false);
 
     const [pendingPayment, setPendingPayment] = useState(() => {
         try {
@@ -95,7 +267,7 @@ function ViewResume() {
 
     const paymentRestoreAttempted = useRef(false);
 
-    const authHeaders = () => {
+    const authHeaders = useCallback(() => {
         const token = localStorage.getItem("token");
 
         if (!token) {
@@ -106,7 +278,7 @@ function ViewResume() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
         };
-    };
+    }, []);
 
     /* =========================================================
        OTP RESEND COUNTDOWN
@@ -170,7 +342,7 @@ function ViewResume() {
        FETCH RESUME
     ========================================================= */
 
-    const fetchResume = async () => {
+    const fetchResume = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
@@ -178,7 +350,7 @@ function ViewResume() {
             const headers = authHeaders();
 
             const response = await fetch(
-                `http://localhost:5000/api/resumes/${id}`,
+                `${API_BASE_URL}/api/resumes/${id}`,
                 {
                     headers,
                 }
@@ -196,50 +368,6 @@ function ViewResume() {
             const loadedResume = data.resume || data;
 
             setResume(loadedResume);
-
-            try {
-                const paymentResponse = await fetch(
-                    "http://localhost:5000/api/resume-payment/history",
-                    {
-                        headers,
-                    }
-                );
-
-                if (paymentResponse.ok) {
-                    const paymentData =
-                        await paymentResponse.json();
-
-                    const history =
-                        paymentData.payments ||
-                        paymentData.history ||
-                        paymentData.data ||
-                        [];
-
-                    const paid =
-                        Array.isArray(history)
-                            ? history.some(
-                                (payment) =>
-                                    String(
-                                        payment.resume_id ??
-                                        payment.resumeId ??
-                                        payment.resumeID ??
-                                        ""
-                                    ) === String(id) &&
-                                    String(
-                                        payment.status || ""
-                                    ).toLowerCase() ===
-                                    "success"
-                            )
-                            : false;
-
-                    setHasPaid(paid);
-                }
-            } catch (paymentError) {
-                console.error(
-                    "Payment history error:",
-                    paymentError
-                );
-            }
 
             console.log(
                 "Resume section order:",
@@ -273,19 +401,19 @@ function ViewResume() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [authHeaders, id, t]);
 
     useEffect(() => {
-        if (id) {
-            fetchResume();
-        }
-    }, [id]);
+        if (!id) return undefined;
+        const initialLoad = window.setTimeout(() => fetchResume(), 0);
+        return () => window.clearTimeout(initialLoad);
+    }, [fetchResume, id]);
 
     /* =========================================================
        SECTION DATA
     ========================================================= */
 
-    const getSectionData = (key) => {
+    const getSectionData = useCallback((key) => {
         if (!resume) return null;
 
         const mapping = {
@@ -344,9 +472,9 @@ function ViewResume() {
         };
 
         return mapping[key];
-    };
+    }, [resume]);
 
-    const sectionVisibility = (() => {
+    const sectionVisibility = useMemo(() => {
         if (!resume) return {};
 
         const value =
@@ -363,9 +491,9 @@ function ViewResume() {
         } catch {
             return {};
         }
-    })();
+    }, [resume]);
 
-    const isVisible = (key) => {
+    const isVisible = useCallback((key) => {
         if (
             sectionVisibility[key] ===
             undefined
@@ -376,35 +504,35 @@ function ViewResume() {
         return Boolean(
             sectionVisibility[key]
         );
-    };
+    }, [sectionVisibility]);
 
-    const sectionOrder = parseSectionOrder(
+    const sectionOrder = useMemo(() => parseSectionOrder(
         resume?.section_order ??
         resume?.sectionOrder
-    );
+    ), [resume?.section_order, resume?.sectionOrder]);
 
     const accentColor =
         resume?.accent_color ||
         resume?.accentColor ||
         "#2563eb";
 
-    const getResumeName = () =>
+    const getResumeName = useCallback(() =>
         resume?.resume_name ||
         resume?.resumeName ||
         resume?.name ||
-        "Resume";
+        "Resume", [resume]);
 
-    const getFullName = () =>
+    const getFullName = useCallback(() =>
         resume?.full_name ||
         resume?.fullName ||
         resume?.name ||
-        "Resume";
+        "Resume", [resume]);
 
     /* =========================================================
        GENERATE PDF
     ========================================================= */
 
-    const generatePDF = async (
+    const generatePDF = useCallback(async (
         skipAuthorization = false
     ) => {
         try {
@@ -419,7 +547,7 @@ function ViewResume() {
             if (!skipAuthorization) {
                 const authorizeResponse =
                     await fetch(
-                        "http://localhost:5000/api/resume-payment/authorize-download",
+                        `${API_BASE_URL}/api/resume-payment/authorize-download`,
                         {
                             method: "POST",
                             headers,
@@ -445,6 +573,37 @@ function ViewResume() {
                 "mm",
                 "a4"
             );
+
+
+            const pdfLanguage = normalizeResumeLanguage(
+                resume?.resume_language ?? resume?.resumeLanguage
+            );
+
+            let pdfFont = "helvetica";
+
+            if (pdfLanguage === "hi") {
+                await loadPdfFont(
+                    pdf,
+                    "NotoSansDevanagari-Regular.ttf",
+                    "NotoDevanagari"
+                );
+                pdfFont = "NotoDevanagari";
+            } else if (pdfLanguage === "zh") {
+                await loadPdfFont(
+                    pdf,
+                    "NotoSansSC-Regular.ttf",
+                    "NotoSansSC"
+                );
+                pdfFont = "NotoSansSC";
+            } else {
+                await loadPdfFont(
+                    pdf,
+                    "Poppins-Regular.ttf",
+                    "Poppins"
+                );
+                pdfFont = "Poppins";
+            }
+
 
             const pageWidth =
                 pdf.internal.pageSize.getWidth();
@@ -472,12 +631,7 @@ function ViewResume() {
                 resume?.fontFamily ||
                 "helvetica";
 
-            const pdfFont =
-                String(fontFamily).toLowerCase() ===
-                    "times"
-                    ? "times"
-                    : "helvetica";
-
+            
             const name = getFullName();
             const resumeName =
                 getResumeName();
@@ -544,40 +698,6 @@ function ViewResume() {
             /* -------------------------------------------------
                BASIC HELPERS
             ------------------------------------------------- */
-
-            const setNormalFont = (
-                size = 9.5
-            ) => {
-                pdf.setFont(
-                    pdfFont,
-                    "normal"
-                );
-
-                pdf.setFontSize(size);
-
-                pdf.setTextColor(
-                    darkText.r,
-                    darkText.g,
-                    darkText.b
-                );
-            };
-
-            const setBoldFont = (
-                size = 10
-            ) => {
-                pdf.setFont(
-                    pdfFont,
-                    "bold"
-                );
-
-                pdf.setFontSize(size);
-
-                pdf.setTextColor(
-                    darkText.r,
-                    darkText.g,
-                    darkText.b
-                );
-            };
 
             const addFooter = () => {
                 const pageNumber =
@@ -1677,7 +1797,7 @@ function ViewResume() {
 
                         if (technologies) {
                             addWrappedText(
-                                `Technologies: ${technologies}`,
+                                `${resumeLabels.technologies}: ${technologies}`,
                                 {
                                     size: 8.7,
                                     color: mutedText,
@@ -1735,210 +1855,94 @@ function ViewResume() {
 
                     switch (sectionKey) {
                         case "careerObjective":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.careerObjective"
-                                )
-                            );
-
-                            addWrappedText(
-                                value,
-                                {
-                                    size: 9.5,
-                                    lineHeight: 4.9,
-                                    after: 1,
-                                }
-                            );
-
+                            addSectionTitle(resumeLabels.careerObjective);
+                            addWrappedText(value, {
+                                size: 9.5,
+                                lineHeight: 4.9,
+                                after: 1,
+                            });
                             break;
 
                         case "education":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.education"
-                                )
-                            );
-
-                            renderEducation(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.education);
+                            renderEducation(value);
                             break;
 
                         case "skills":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.skills"
-                                )
-                            );
-
-                            renderSimpleList(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.skills);
+                            renderSimpleList(value);
                             break;
 
                         case "experience":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.workExperience"
-                                )
-                            );
-
-                            renderExperience(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.experience);
+                            renderExperience(value);
                             break;
 
                         case "internships":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.internships"
-                                )
-                            );
-
-                            renderInternships(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.internships);
+                            renderInternships(value);
                             break;
 
                         case "projects":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.projects"
-                                )
-                            );
-
-                            renderProjects(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.projects);
+                            renderProjects(value);
                             break;
 
                         case "certifications":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.certifications"
-                                )
-                            );
-
-                            renderSimpleList(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.certifications);
+                            renderSimpleList(value);
                             break;
 
                         case "achievements":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.achievements"
-                                )
-                            );
-
-                            renderSimpleList(
-                                value
-                            );
-
+                            addSectionTitle(resumeLabels.achievements);
+                            renderSimpleList(value);
                             break;
 
                         case "languages":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.languages"
-                                )
-                            );
+                            addSectionTitle(resumeLabels.languages);
+                            renderSimpleList(value);
+                            break;
 
-                            renderSimpleList(
-                                value
-                            );
-
+                        case "references":
+                            addSectionTitle(resumeLabels.references);
+                            renderSimpleList(value);
                             break;
 
                         case "socialLinks": {
-                            addSectionTitle(
-                                t(
-                                    "viewResume.socialLinks"
-                                )
-                            );
+                            addSectionTitle(resumeLabels.socialLinks);
 
-                            if (
-                                value &&
-                                typeof value ===
-                                "object"
-                            ) {
-                                const linkedin =
-                                    value.linkedin ||
-                                    value.linkedinUrl ||
-                                    "";
-
-                                const github =
-                                    value.github ||
-                                    value.githubUrl ||
-                                    "";
-
-                                const portfolio =
-                                    value.portfolio ||
-                                    value.portfolioUrl ||
-                                    "";
+                            if (value && typeof value === "object") {
+                                const linkedin = value.linkedin || value.linkedinUrl || "";
+                                const github = value.github || value.githubUrl || "";
+                                const portfolio = value.portfolio || value.portfolioUrl || "";
 
                                 if (linkedin) {
-                                    addWrappedText(
-                                        `${t(
-                                            "viewResume.linkedin"
-                                        )}: ${linkedin}`,
-                                        {
-                                            size: 8.8,
-                                            color: accent,
-                                            after: 1.5,
-                                        }
-                                    );
+                                    addWrappedText(`${resumeLabels.linkedin}: ${linkedin}`, {
+                                        size: 8.8,
+                                        color: accent,
+                                        after: 1.5,
+                                    });
                                 }
 
                                 if (github) {
-                                    addWrappedText(
-                                        `${t(
-                                            "viewResume.github"
-                                        )}: ${github}`,
-                                        {
-                                            size: 8.8,
-                                            color: accent,
-                                            after: 1.5,
-                                        }
-                                    );
+                                    addWrappedText(`${resumeLabels.github}: ${github}`, {
+                                        size: 8.8,
+                                        color: accent,
+                                        after: 1.5,
+                                    });
                                 }
 
                                 if (portfolio) {
-                                    addWrappedText(
-                                        `${t(
-                                            "viewResume.portfolio"
-                                        )}: ${portfolio}`,
-                                        {
-                                            size: 8.8,
-                                            color: accent,
-                                            after: 1.5,
-                                        }
-                                    );
+                                    addWrappedText(`${resumeLabels.portfolio}: ${portfolio}`, {
+                                        size: 8.8,
+                                        color: accent,
+                                        after: 1.5,
+                                    });
                                 }
                             }
 
                             break;
                         }
-
-                        case "references":
-                            addSectionTitle(
-                                t(
-                                    "viewResume.references"
-                                )
-                            );
-
-                            renderSimpleList(
-                                value
-                            );
-
-                            break;
-
                         default:
                             break;
                     }
@@ -2005,7 +2009,7 @@ function ViewResume() {
 
             try {
                 await fetch(
-                    "http://localhost:5000/api/resume-payment/record-download",
+                    `${API_BASE_URL}/api/resume-payment/record-download`,
                     {
                         method: "POST",
                         headers,
@@ -2068,20 +2072,33 @@ function ViewResume() {
         } finally {
             setDownloading(false);
         }
-    };
+    }, [
+        accentColor,
+        authHeaders,
+        getFullName,
+        getResumeName,
+        getSectionData,
+        id,
+        isVisible,
+        resume,
+        resumeLabels,
+        sectionOrder,
+        showToast,
+        t,
+    ]);
 
     /* =========================================================
        VERIFY PAYMENT
     ========================================================= */
 
-    const verifyPendingPayment = async (
+    const verifyPendingPayment = useCallback(async (
         paymentData
     ) => {
         try {
             const headers = authHeaders();
 
             const response = await fetch(
-                "http://localhost:5000/api/resume-payment/verify-payment",
+                `${API_BASE_URL}/api/resume-payment/verify-payment`,
                 {
                     method: "POST",
                     headers,
@@ -2108,7 +2125,6 @@ function ViewResume() {
             );
 
             setPendingPayment(null);
-            setHasPaid(true);
 
             showToast(
                 t(
@@ -2136,7 +2152,7 @@ function ViewResume() {
         } finally {
             setPaymentLoading(false);
         }
-    };
+    }, [authHeaders, generatePDF, showToast, t]);
 
     /* =========================================================
        RESTORE PENDING PAYMENT
@@ -2156,7 +2172,7 @@ function ViewResume() {
         verifyPendingPayment(
             pendingPayment
         );
-    }, [pendingPayment]);
+    }, [pendingPayment, verifyPendingPayment]);
 
     /* =========================================================
        SEND OTP
@@ -2174,7 +2190,7 @@ function ViewResume() {
                 authHeaders();
 
             const response = await fetch(
-                "http://localhost:5000/api/resume-download/request-otp",
+                `${API_BASE_URL}/api/resume-download/request-otp`,
                 {
                     method: "POST",
                     headers,
@@ -2293,7 +2309,7 @@ function ViewResume() {
                 authHeaders();
 
             const response = await fetch(
-                "http://localhost:5000/api/resume-download/verify-otp",
+                `${API_BASE_URL}/api/resume-download/verify-otp`,
                 {
                     method: "POST",
                     headers,
@@ -2389,7 +2405,7 @@ function ViewResume() {
 
             const orderResponse =
                 await fetch(
-                    "http://localhost:5000/api/resume-payment/create-order",
+                    `${API_BASE_URL}/api/resume-payment/create-order`,
                     {
                         method: "POST",
                         headers,
@@ -2412,17 +2428,11 @@ function ViewResume() {
             }
 
             const options = {
-                key:
-                    orderData.key_id ||
-                    orderData.keyId,
+                key: orderData.key_id || orderData.keyId,
 
-                amount:
-                    orderData.amount,
+                amount: orderData.order?.amount,
 
-                currency:
-                    orderData.currency ||
-                    "INR",
-
+                currency: orderData.order?.currency || "INR",
                 name:
                     "Resume Builder",
 
@@ -2431,10 +2441,8 @@ function ViewResume() {
                         "viewResume.premiumDownloadDescription"
                     ),
 
-                order_id:
-                    orderData.order_id ||
-                    orderData.orderId,
-
+                order_id: orderData.order?.id,
+                
                 handler:
                     async function (
                         response
@@ -2465,17 +2473,7 @@ function ViewResume() {
                                 paymentData
                             );
 
-                            /*
-                             * verifyPendingPayment()
-                             * already:
-                             * 1. verifies payment
-                             * 2. marks paid
-                             * 3. shows success toast
-                             * 4. generates PDF
-                             *
-                             * Therefore DO NOT generate
-                             * another PDF here.
-                             */
+                            
                             await verifyPendingPayment(
                                 paymentData
                             );
@@ -2537,7 +2535,7 @@ function ViewResume() {
 
                     try {
                         await fetch(
-                            "http://localhost:5000/api/resume-payment/fail-order",
+                            `${API_BASE_URL}/api/resume-payment/fail-order`,
                             {
                                 method: "POST",
                                 headers,
@@ -2636,7 +2634,7 @@ function ViewResume() {
 
                 const authorizeResponse =
                     await fetch(
-                        "http://localhost:5000/api/resume-payment/authorize-download",
+                        `${API_BASE_URL}/api/resume-payment/authorize-download`,
                         {
                             method: "POST",
                             headers,
@@ -2745,60 +2743,17 @@ function ViewResume() {
         }
 
         const titles = {
-            careerObjective:
-                t(
-                    "viewResume.careerObjective"
-                ),
-
-            education:
-                t(
-                    "viewResume.education"
-                ),
-
-            skills:
-                t(
-                    "viewResume.skills"
-                ),
-
-            experience:
-                t(
-                    "viewResume.workExperience"
-                ),
-
-            internships:
-                t(
-                    "viewResume.internships"
-                ),
-
-            projects:
-                t(
-                    "viewResume.projects"
-                ),
-
-            certifications:
-                t(
-                    "viewResume.certifications"
-                ),
-
-            achievements:
-                t(
-                    "viewResume.achievements"
-                ),
-
-            languages:
-                t(
-                    "viewResume.languages"
-                ),
-
-            socialLinks:
-                t(
-                    "viewResume.socialLinks"
-                ),
-
-            references:
-                t(
-                    "viewResume.references"
-                ),
+            careerObjective: resumeLabels.careerObjective,
+            education: resumeLabels.education,
+            skills: resumeLabels.skills,
+            experience: resumeLabels.experience,
+            internships: resumeLabels.internships,
+            projects: resumeLabels.projects,
+            certifications: resumeLabels.certifications,
+            achievements: resumeLabels.achievements,
+            languages: resumeLabels.languages,
+            socialLinks: resumeLabels.socialLinks,
+            references: resumeLabels.references,
         };
 
         return (
@@ -2806,14 +2761,10 @@ function ViewResume() {
                 key={key}
                 title={titles[key]}
                 data={value}
-                accentColor={
-                    accentColor
-                }
-                socialLinks={
-                    key ===
-                    "socialLinks"
-                }
+                accentColor={accentColor}
+                socialLinks={key === "socialLinks"}
                 t={t}
+                labels={resumeLabels}
             />
         );
     };
@@ -3074,9 +3025,7 @@ function ViewResume() {
                                 {email && (
                                     <span>
                                         <strong>
-                                            {t(
-                                                "viewResume.email"
-                                            )}
+                                            {resumeLabels.email}
                                             :
                                         </strong>{" "}
                                         {email}
@@ -3086,9 +3035,7 @@ function ViewResume() {
                                 {phone && (
                                     <span>
                                         <strong>
-                                            {t(
-                                                "viewResume.phoneNumber"
-                                            )}
+                                            {resumeLabels.phone}
                                             :
                                         </strong>{" "}
                                         {phone}
@@ -3098,9 +3045,7 @@ function ViewResume() {
                                 {address && (
                                     <span>
                                         <strong>
-                                            {t(
-                                                "viewResume.address"
-                                            )}
+                                            {resumeLabels.address}
                                             :
                                         </strong>{" "}
                                         {address}
@@ -3322,8 +3267,9 @@ function ResumeSection({
     accentColor,
     socialLinks = false,
     t,
+    labels = RESUME_LABELS.en,
 }) {
-    const renderValue = (
+        const renderValue = (
         value
     ) => {
         if (
@@ -3536,10 +3482,8 @@ function ResumeSection({
                                 rel="noreferrer"
                             >
                                 <strong>
-                                    {t(
-                                        "viewResume.linkedin"
-                                    )}
-                                    :
+                                    {labels.linkedin}:
+                                    
                                 </strong>{" "}
                                 {data.linkedin ||
                                     data.linkedinUrl}
@@ -3557,10 +3501,8 @@ function ResumeSection({
                                 rel="noreferrer"
                             >
                                 <strong>
-                                    {t(
-                                        "viewResume.github"
-                                    )}
-                                    :
+                                    {labels.github}:
+                                    
                                 </strong>{" "}
                                 {data.github ||
                                     data.githubUrl}
@@ -3578,10 +3520,7 @@ function ResumeSection({
                                 rel="noreferrer"
                             >
                                 <strong>
-                                    {t(
-                                        "viewResume.portfolio"
-                                    )}
-                                    :
+                                    {labels.portfolio}:
                                 </strong>{" "}
                                 {data.portfolio ||
                                     data.portfolioUrl}

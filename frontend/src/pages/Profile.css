@@ -516,6 +516,27 @@
     font-weight: 600;
 }
 
+.revoke-session-button {
+    min-height: 38px;
+    margin-top: 14px;
+    padding: 8px 12px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fff;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.revoke-session-button:hover:not(:disabled) {
+    background: #fef2f2;
+}
+
+.revoke-session-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
 
 /* =========================================================
    LOADING PROFILE

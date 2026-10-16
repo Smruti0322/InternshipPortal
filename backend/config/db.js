@@ -1,7 +1,14 @@
 const mysql = require("mysql2/promise");
 const dotenv = require("dotenv");
+const path = require("path");
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, "..", ".env") });
+
+const requiredVariables = ["DB_HOST", "DB_USER", "DB_NAME"];
+const missingVariables = requiredVariables.filter((name) => !process.env[name]);
+if (missingVariables.length) {
+    throw new Error(`Missing required database configuration: ${missingVariables.join(", ")}`);
+}
 
 const db = mysql.createPool({
     host: process.env.DB_HOST,

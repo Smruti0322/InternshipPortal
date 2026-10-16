@@ -1,7 +1,7 @@
-const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const db = require("../config/db");
+const { generateOTP, generateTemporaryPassword, isExpired, hasAttemptsRemaining } = require("../utils/recoverySecurity");
 
 /*
 =========================================
@@ -24,11 +24,6 @@ GENERATE OTP
 =========================================
 */
 
-const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-
 /*
 =========================================
 REQUEST OTP
@@ -37,6 +32,8 @@ POST /api/forgot-password/request
 */
 
 const requestOTP = async (req, res) => {
+    let connection = null;
+    let transactionStarted = false;
     try {
         const { identifier, method } = req.body;
 
@@ -47,6 +44,7 @@ const requestOTP = async (req, res) => {
         }
 
         const cleanIdentifier = identifier.trim();
+        const resetMethod = method === "phone" ? "phone" : "email";
 
         /*
         -----------------------------------------
@@ -57,10 +55,20 @@ const requestOTP = async (req, res) => {
         // FIND USER
         let user;
 
-        if (method === "phone") {
-            return res.status(400).json({
-                message: "Phone OTP is not configured yet. Please use email."
-            });
+        if (resetMethod === "phone") {
+            const normalizedPhone = cleanIdentifier.replace(/[^\d+]/g, "");
+            if (!/^\+?[1-9]\d{7,14}$/.test(normalizedPhone)) {
+                return res.status(400).json({ message: "Enter a valid registered mobile number." });
+            }
+            const [phoneUsers] = await db.execute(
+                "SELECT id FROM users WHERE mobile = ? LIMIT 1",
+                [normalizedPhone]
+            );
+            if (!phoneUsers.length) return res.status(404).json({ message: "No account found with this mobile number." });
+            return res.status(501).json({ message: "Mobile recovery is unavailable until an SMS provider is configured." });
+        }
+        if (resetMethod !== "email") {
+            return res.status(400).json({ message: "Unsupported recovery method." });
         }
 
         const [rows] = await db.execute(
@@ -79,6 +87,22 @@ const requestOTP = async (req, res) => {
             return res.status(404).json({
                 message: "No account found with this email address."
             });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        transactionStarted = true;
+        await connection.execute("SELECT id FROM users WHERE id = ? FOR UPDATE", [user.id]);
+        const [recentRequests] = await connection.execute(
+            "SELECT id FROM password_reset_history WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1 FOR UPDATE",
+            [user.id]
+        );
+        if (recentRequests.length) {
+            await connection.rollback();
+            transactionStarted = false;
+            connection.release();
+            connection = null;
+            return res.status(429).json({ message: "A password recovery request was already made in the last 24 hours." });
         }
         /*
         -----------------------------------------
@@ -115,7 +139,7 @@ const requestOTP = async (req, res) => {
         created_at
         */
 
-        const [result] = await db.execute(
+        const [result] = await connection.execute(
             `
     INSERT INTO password_reset_history
     (
@@ -133,10 +157,9 @@ const requestOTP = async (req, res) => {
                 user.id,
                 otp,
                 expiresAt,
-                method || "email"
+                resetMethod
             ]
         );
-
         const resetHistoryId = result.insertId;
 
         /*
@@ -145,7 +168,7 @@ const requestOTP = async (req, res) => {
         -----------------------------------------
         */
 
-        if (method === "email") {
+        if (resetMethod === "email") {
 
             await transporter.sendMail({
                 from: process.env.SMTP_USER,
@@ -180,6 +203,13 @@ const requestOTP = async (req, res) => {
 
         }
 
+        // Commit the request only after SMTP accepted the OTP. A mail delivery
+        // failure rolls back the OTP row and allows a safe retry.
+        await connection.commit();
+        transactionStarted = false;
+        connection.release();
+        connection = null;
+
 
         /*
         -----------------------------------------
@@ -195,6 +225,11 @@ const requestOTP = async (req, res) => {
         });
 
     } catch (error) {
+
+        if (connection) {
+            if (transactionStarted) await connection.rollback().catch(() => {});
+            connection.release();
+        }
 
         console.error("REQUEST OTP ERROR:", error);
 
@@ -214,14 +249,11 @@ POST /api/forgot-password/verify-otp
 */
 
 const verifyOTP = async (req, res) => {
+    let connection = null;
+    let transactionStarted = false;
     try {
 
-        const {
-            user_id,
-            reset_history_id,
-            otp,
-            method
-        } = req.body;
+        const { user_id, reset_history_id, otp } = req.body;
 
 
         /*
@@ -243,25 +275,32 @@ const verifyOTP = async (req, res) => {
         -----------------------------------------
         */
 
-        const [rows] = await db.execute(
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        transactionStarted = true;
+        const [rows] = await connection.execute(
             `
     SELECT *
     FROM password_reset_history
     WHERE id = ?
       AND user_id = ?
-      AND otp = ?
       AND otp_verified = 0
+      AND status = 'pending'
     LIMIT 1
+    FOR UPDATE
     `,
             [
                 reset_history_id,
-                user_id,
-                otp
+                user_id
             ]
         );
 
 
         if (rows.length === 0) {
+            await connection.rollback();
+            transactionStarted = false;
+            connection.release();
+            connection = null;
             return res.status(400).json({
                 message: "Invalid OTP."
             });
@@ -269,6 +308,14 @@ const verifyOTP = async (req, res) => {
 
 
         const resetRequest = rows[0];
+
+        if (!hasAttemptsRemaining(resetRequest.attempts)) {
+            await connection.rollback();
+            transactionStarted = false;
+            connection.release();
+            connection = null;
+            return res.status(429).json({ message: "Too many invalid attempts. Request recovery again later." });
+        }
 
 
         /*
@@ -278,14 +325,28 @@ const verifyOTP = async (req, res) => {
         */
 
         if (
-            new Date(resetRequest.otp_expires_at).getTime() <
-            Date.now()
+            isExpired(resetRequest.otp_expires_at)
         ) {
+
+            await connection.rollback();
+            transactionStarted = false;
+            connection.release();
+            connection = null;
 
             return res.status(400).json({
                 message: "OTP has expired. Please request a new OTP."
             });
 
+        }
+
+        if (String(resetRequest.otp) !== String(otp).trim()) {
+            await connection.execute("UPDATE password_reset_history SET attempts = attempts + 1 WHERE id = ? AND otp_verified = 0", [reset_history_id]);
+            const attempts = Number(resetRequest.attempts || 0) + 1;
+            await connection.commit();
+            transactionStarted = false;
+            connection.release();
+            connection = null;
+            return res.status(attempts >= 5 ? 429 : 400).json({ message: attempts >= 5 ? "Too many invalid attempts." : "Invalid OTP." });
         }
 
 
@@ -295,26 +356,13 @@ const verifyOTP = async (req, res) => {
         -----------------------------------------
         */
 
-        await db.execute(
-            `
-            UPDATE password_reset_history
-            SET otp_verified = 1,
-            verification_time = NOW(),
-            status = 'completed'
-            WHERE id = ?
-            `,
-            [reset_history_id]
-        );
-
-
         /*
         -----------------------------------------
         GENERATE TEMPORARY PASSWORD
         -----------------------------------------
         */
 
-        const temporaryPassword =
-            crypto.randomBytes(5).toString("hex");
+        const temporaryPassword = generateTemporaryPassword();
 
 
         const hashedPassword =
@@ -327,27 +375,13 @@ const verifyOTP = async (req, res) => {
         -----------------------------------------
         */
 
-        await db.execute(
-            `
-    UPDATE users
-    SET password = ?,
-        must_change_password = 1
-    WHERE id = ?
-    `,
-            [
-                hashedPassword,
-                user_id
-            ]
-        );
-
-
         /*
         -----------------------------------------
         SEND TEMPORARY PASSWORD
         -----------------------------------------
         */
 
-        if (method === "email") {
+        if (resetRequest.reset_method === "email") {
 
             const [userRows] = await db.execute(
                 `
@@ -407,6 +441,26 @@ const verifyOTP = async (req, res) => {
         -----------------------------------------
         */
 
+        try {
+            const [lockedRows] = await connection.execute(
+                "SELECT id FROM password_reset_history WHERE id = ? AND user_id = ? AND otp_verified = 0 AND status = 'pending' AND otp_expires_at > NOW() AND attempts < 5 FOR UPDATE",
+                [reset_history_id, user_id]
+            );
+            if (!lockedRows.length) throw Object.assign(new Error("This recovery request is no longer valid."), { status: 409 });
+            await connection.execute("UPDATE users SET password = ?, must_change_password = 1 WHERE id = ?", [hashedPassword, user_id]);
+            await connection.execute("UPDATE password_reset_history SET otp_verified = 1, verification_time = NOW(), status = 'completed' WHERE id = ?", [reset_history_id]);
+            await connection.commit();
+            transactionStarted = false;
+        } catch (error) {
+            await connection.rollback();
+            transactionStarted = false;
+            throw error;
+        }
+        if (connection) {
+            connection.release();
+            connection = null;
+        }
+
         return res.status(200).json({
             success: true,
             message:
@@ -416,9 +470,14 @@ const verifyOTP = async (req, res) => {
 
     } catch (error) {
 
+        if (connection) {
+            if (transactionStarted) await connection.rollback().catch(() => {});
+            connection.release();
+        }
+
         console.error("VERIFY OTP ERROR:", error);
 
-        return res.status(500).json({
+        return res.status(error.status || 500).json({
             message: "Unable to verify OTP.",
             error: error.message
         });

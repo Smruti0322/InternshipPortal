@@ -6,17 +6,9 @@ const crypto = require("crypto");
 // =========================================================
 
 const getClientIp = (req) => {
-    let ip =
-        req.headers["x-forwarded-for"] ||
-        req.headers["x-real-ip"] ||
-        req.socket?.remoteAddress ||
-        req.ip ||
-        "";
-
-    // x-forwarded-for can contain multiple IPs
-    if (typeof ip === "string" && ip.includes(",")) {
-        ip = ip.split(",")[0].trim();
-    }
+    // Express req.ip already applies the configured trust proxy policy.
+    // Reading forwarding headers directly would let clients spoof their IP.
+    let ip = req.ip || req.socket?.remoteAddress || "";
 
     // Convert IPv4-mapped IPv6
     if (ip.startsWith("::ffff:")) {

@@ -86,6 +86,38 @@
     margin-bottom: 24px;
 }
 
+.internship-filters {
+    display: grid;
+    grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr);
+    gap: 14px;
+    margin: 0 0 22px;
+}
+
+.internship-filters label {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.internship-filters input,
+.internship-filters select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #1e293b;
+}
+
+.internship-filters input:focus-visible,
+.internship-filters select:focus-visible {
+    border-color: #2563eb;
+}
+
 .internship-tabs button {
     padding: 14px 4px;
     border: 0;
@@ -264,6 +296,9 @@
 }
 
 @media (max-width: 600px) {
+    .internship-filters {
+        grid-template-columns: 1fr;
+    }
     .internship-page {
         padding: 24px 14px;
     }

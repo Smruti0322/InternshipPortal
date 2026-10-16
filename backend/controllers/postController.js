@@ -1,4 +1,6 @@
 const db = require("../config/db");
+const fs = require("fs/promises");
+const { getDailyPostLimit } = require("../utils/postingRules");
 
 // =========================================================
 // HELPERS
@@ -48,8 +50,8 @@ const extractMentions = (text = "") => {
 // CHECK POSTING PERMISSION + DAILY POST LIMIT
 // =========================================================
 
-const checkPostingPermission = async (userId) => {
-    const [result] = await db.query(
+const checkPostingPermission = async (userId, queryable = db) => {
+    const [result] = await queryable.query(
         `
         SELECT COUNT(*) AS friend_count
         FROM friendships
@@ -72,31 +74,13 @@ const checkPostingPermission = async (userId) => {
     // 11+ friends  -> Unlimited
     // =====================================================
 
-    let dailyLimit;
-
-    if (friendCount === 0) {
-        dailyLimit = 0;
-    } else if (friendCount === 1) {
-        dailyLimit = 1;
-    } else if (
-        friendCount >= 2 &&
-        friendCount <= 5
-    ) {
-        dailyLimit = 2;
-    } else if (
-        friendCount >= 6 &&
-        friendCount <= 10
-    ) {
-        dailyLimit = 5;
-    } else {
-        dailyLimit = null;
-    }
+    const dailyLimit = getDailyPostLimit(friendCount);
 
     // =====================================================
     // COUNT TODAY'S POSTS
     // =====================================================
 
-    const [postCountResult] = await db.query(
+    const [postCountResult] = await queryable.query(
         `
         SELECT COUNT(*) AS posts_today
         FROM posts
@@ -169,8 +153,7 @@ const getPostingLimit = async (req, res) => {
             });
         }
 
-        const permission =
-            await checkPostingPermission(userId);
+        const permission = await checkPostingPermission(userId);
 
         return res.status(200).json({
             success: true,
@@ -205,6 +188,10 @@ const getPostingLimit = async (req, res) => {
 
 const createPost = async (req, res) => {
     const connection = await db.getConnection();
+    const uploadedFiles = req.files || [];
+    const removeUploadedFiles = async () => Promise.all(
+        uploadedFiles.map((file) => fs.unlink(file.path).catch(() => {}))
+    );
 
     let transactionStarted = false;
 
@@ -220,14 +207,21 @@ const createPost = async (req, res) => {
                 ? "friends"
                 : "public";
 
-        const permission =
-            await checkPostingPermission(userId);
+        // Serialize each user's post creation so concurrent requests cannot
+        // both pass a daily quota check and exceed the server-side limit.
+        await connection.beginTransaction();
+        transactionStarted = true;
+        await connection.query("SELECT id FROM users WHERE id = ? FOR UPDATE", [userId]);
+        const permission = await checkPostingPermission(userId, connection);
 
         // =================================================
         // CHECK POSTING PERMISSION
         // =================================================
 
         if (!permission.allowed) {
+            await removeUploadedFiles();
+            await connection.rollback();
+            transactionStarted = false;
             connection.release();
 
             let message;
@@ -258,9 +252,12 @@ const createPost = async (req, res) => {
         // MEDIA
         // =================================================
 
-        const files = req.files || [];
+        const files = uploadedFiles;
 
         if (!content && files.length === 0) {
+            await removeUploadedFiles();
+            await connection.rollback();
+            transactionStarted = false;
             connection.release();
 
             return res.status(400).json({
@@ -271,6 +268,9 @@ const createPost = async (req, res) => {
         }
 
         if (files.length > 10) {
+            await removeUploadedFiles();
+            await connection.rollback();
+            transactionStarted = false;
             connection.release();
 
             return res.status(400).json({
@@ -305,9 +305,6 @@ const createPost = async (req, res) => {
         // =================================================
         // TRANSACTION
         // =================================================
-
-        await connection.beginTransaction();
-        transactionStarted = true;
 
         // =================================================
         // CREATE POST
@@ -554,6 +551,7 @@ const createPost = async (req, res) => {
                     ),
         });
     } catch (error) {
+        await removeUploadedFiles();
         if (transactionStarted) {
             try {
                 await connection.rollback();
@@ -2416,4 +2414,5 @@ module.exports = {
     recordPostView,
     getSavedPosts,
     deletePost,
+    getDailyPostLimit,
 };

@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 
 const authenticateToken = require("../middleware/authMiddleware");
 
@@ -67,28 +68,8 @@ const storage = multer.diskStorage({
     },
 
     filename: (req, file, cb) => {
-        const extension =
-            path.extname(file.originalname);
-
-        const baseName =
-            path
-                .basename(
-                    file.originalname,
-                    extension
-                )
-                .replace(
-                    /[^a-zA-Z0-9-_]/g,
-                    "-"
-                );
-
-        const uniqueName =
-            `${ Date.now() } -${
-    Math.round(
-        Math.random() * 1e9
-    )
-} -${ baseName }${ extension } `;
-
-        cb(null, uniqueName);
+        const extension = path.extname(file.originalname).toLowerCase();
+        cb(null, `${Date.now()}-${crypto.randomBytes(16).toString("hex")}${extension}`);
     },
 });
 
@@ -116,14 +97,14 @@ const fileFilter = (
         "video/x-msvideo",
     ];
 
-    if (
-        allowedImages.includes(
-            file.mimetype
-        ) ||
-        allowedVideos.includes(
-            file.mimetype
-        )
-    ) {
+    const extension = path.extname(file.originalname).toLowerCase();
+    const imageExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+    const videoExtensions = new Set([".mp4", ".webm", ".mov", ".avi"]);
+    const mimeMatchesExtension =
+        (allowedImages.includes(file.mimetype) && imageExtensions.has(extension)) ||
+        (allowedVideos.includes(file.mimetype) && videoExtensions.has(extension));
+
+    if (mimeMatchesExtension) {
         cb(null, true);
     } else {
         cb(

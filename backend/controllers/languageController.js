@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const { getClientIp } = require("../utils/loginEnvironment");
 
 const supportedLanguages = [
     "en",
@@ -178,6 +179,23 @@ const getLanguage = async (req, res) => {
     }
 };
 
+const getLanguageHistory = async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT old_language, new_language, ip_address, browser, device, created_at
+             FROM language_change_history
+             WHERE user_id = ?
+             ORDER BY created_at DESC
+             LIMIT 100`,
+            [req.user.id]
+        );
+        return res.json({ history: rows });
+    } catch (error) {
+        console.error("Language history error:", error.message);
+        return res.status(500).json({ message: "Unable to load language history." });
+    }
+};
+
 /*
 =========================================================
 GET CLIENT INFORMATION
@@ -188,12 +206,7 @@ const getClientInformation = (req) => {
     const userAgent =
         req.headers["user-agent"] || "Unknown";
 
-    const ipAddress =
-        req.headers["x-forwarded-for"]
-            ?.split(",")[0]
-            ?.trim() ||
-        req.socket?.remoteAddress ||
-        "Unknown";
+    const ipAddress = getClientIp(req) || "Unknown";
 
     let browser = "Unknown";
     let device = "Unknown";
@@ -908,6 +921,7 @@ const verifyFrenchOtp = async (req, res) => {
 module.exports = {
     getUserLanguage,
     getLanguage,
+    getLanguageHistory,
     changeLanguage,
     requestFrenchOtp,
     verifyFrenchOtp,

@@ -4,6 +4,7 @@ const authenticateToken = require("../middleware/authMiddleware");
 
 const {
     getLanguage,
+    getLanguageHistory,
     changeLanguage,
     requestFrenchOtp,
     verifyFrenchOtp,
@@ -17,6 +18,8 @@ router.get(
     authenticateToken,
     getLanguage
 );
+
+router.get("/history", authenticateToken, getLanguageHistory);
 
 // Change language
 router.put(

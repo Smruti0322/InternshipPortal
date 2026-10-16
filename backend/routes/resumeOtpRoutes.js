@@ -1,16 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const mysql = require("mysql2/promise");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-
-const pool = mysql.createPool({
-    host: "localhost",
-    user: "root",
-    password: "",
-    database: "internship_portal",
-    port: 3306,
-});
+const db = require("../config/db");
+const authenticateToken = require("../middleware/authMiddleware");
 
 // ==========================================
 // GMAIL TRANSPORTER
@@ -39,15 +32,24 @@ transporter.verify((error, success) => {
 // SEND OTP
 // ==========================================
 
+router.use(authenticateToken);
+
 router.post("/send", async (req, res) => {
     try {
-        const { user_id, email } = req.body;
+        const { email, resume_id: resumeId } = req.body;
+        const user_id = req.user.id;
 
-        if (!user_id || !email) {
+        if (!email || !resumeId) {
             return res.status(400).json({
                 message: "User ID and email are required",
             });
         }
+
+        const [ownedResume] = await db.query(
+            "SELECT id FROM resumes WHERE id = ? AND user_id = ? LIMIT 1",
+            [resumeId, user_id]
+        );
+        if (!ownedResume.length) return res.status(404).json({ message: "Resume not found." });
 
         // Check SMTP configuration
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -67,11 +69,30 @@ router.post("/send", async (req, res) => {
         );
 
         // Save OTP in database
-        await pool.query(
+        const [recent] = await db.query(
+            "SELECT created_at FROM resume_otps WHERE user_id = ? AND resume_id = ? ORDER BY id DESC LIMIT 1",
+            [user_id, resumeId]
+        );
+        if (recent.length && Date.now() - new Date(recent[0].created_at).getTime() < 60_000) {
+            const retryAfter = Math.ceil((60_000 - (Date.now() - new Date(recent[0].created_at).getTime())) / 1000);
+            return res.status(429).json({ message: "Please wait before requesting another OTP.", retry_after_seconds: retryAfter });
+        }
+
+        const [userRows] = await db.query("SELECT email FROM users WHERE id = ? LIMIT 1", [user_id]);
+        if (!userRows.length || userRows[0].email.toLowerCase() !== String(email).trim().toLowerCase()) {
+            return res.status(400).json({ message: "Use the email address registered to your account." });
+        }
+
+        await db.query(
+            "DELETE FROM resume_otps WHERE user_id = ? AND resume_id = ? AND verified = 0",
+            [user_id, resumeId]
+        );
+
+        await db.query(
             `INSERT INTO resume_otps
-            (user_id, email, otp, expires_at)
-            VALUES (?, ?, ?, ?)`,
-            [user_id, email, otp, expiresAt]
+            (user_id, resume_id, otp, created_at, expires_at, verified, attempts)
+            VALUES (?, ?, ?, UTC_TIMESTAMP(), ?, 0, 0)`,
+            [user_id, resumeId, otp, expiresAt]
         );
 
         // Send email
@@ -129,6 +150,8 @@ This OTP will expire in 5 minutes.
 Please do not share this OTP with anyone.`,
         });
 
+        res.setHeader("Cache-Control", "no-store");
+
         console.log("OTP Email Sent:", mailInfo.messageId);
 
         return res.status(200).json({
@@ -150,25 +173,25 @@ Please do not share this OTP with anyone.`,
 
 router.post("/verify", async (req, res) => {
     try {
-        const { user_id, email, otp } = req.body;
+        const { email, resume_id: resumeId, otp } = req.body;
+        const user_id = req.user.id;
 
-        if (!user_id || !email || !otp) {
+        if (!email || !resumeId || !otp) {
             return res.status(400).json({
                 message: "User ID, email and OTP are required",
             });
         }
 
-        const [rows] = await pool.query(
+        const [rows] = await db.query(
             `SELECT *
              FROM resume_otps
              WHERE user_id = ?
-             AND email = ?
-             AND otp = ?
+             AND resume_id = ?
              AND verified = FALSE
              AND expires_at > NOW()
              ORDER BY id DESC
              LIMIT 1`,
-            [user_id, email, otp]
+            [user_id, resumeId]
         );
 
         if (rows.length === 0) {
@@ -177,12 +200,25 @@ router.post("/verify", async (req, res) => {
             });
         }
 
-        await pool.query(
+        const record = rows[0];
+        if (Number(record.attempts || 0) >= 5) {
+            return res.status(429).json({ message: "Too many invalid attempts. Request a new OTP." });
+        }
+        if (String(record.otp) !== String(otp).trim()) {
+            await db.query("UPDATE resume_otps SET attempts = attempts + 1 WHERE id = ? AND verified = 0", [record.id]);
+            return res.status(Number(record.attempts || 0) + 1 >= 5 ? 429 : 400).json({ message: "Invalid or expired OTP." });
+        }
+
+        await db.query(
             `UPDATE resume_otps
              SET verified = TRUE
-             WHERE id = ?`,
-            [rows[0].id]
+             WHERE id = ? AND verified = FALSE AND expires_at > UTC_TIMESTAMP() AND attempts < 5`,
+            [record.id]
         );
+        const [updated] = await db.query("SELECT verified FROM resume_otps WHERE id = ?", [record.id]);
+        if (!updated.length || Number(updated[0].verified) !== 1) {
+            return res.status(409).json({ message: "OTP expired or was already used." });
+        }
 
         return res.status(200).json({
             message: "OTP verified successfully",

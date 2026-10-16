@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { API_BASE_URL } from "../config/api.js";
 
 const SUPPORTED_LANGUAGES = [
     "en",
@@ -80,8 +81,7 @@ function LanguageSelector() {
             User must be logged in
         */
         if (!token) {
-            setError(t("loginRequiredLanguage"));
-            return;
+            setError(t("languageChange.loginRequiredLanguage"));            return;
         }
 
         /*
@@ -96,7 +96,7 @@ function LanguageSelector() {
                 setLoading(true);
 
                 const response = await fetch(
-                    "http://localhost:5000/api/language/request-french-otp",
+                    `${API_BASE_URL}/api/language/request-french-otp`,
                     {
                         method: "POST",
                         headers: {
@@ -148,7 +148,7 @@ function LanguageSelector() {
             setLoading(true);
 
             const response = await fetch(
-                "http://localhost:5000/api/language",
+                `${API_BASE_URL}/api/language`,
                 {
                     method: "PUT",
                     headers: {
@@ -166,8 +166,7 @@ function LanguageSelector() {
             if (!response.ok) {
                 throw new Error(
                     data.message ||
-                    t("failedChangeLanguage")
-                );
+                    t("languageChange.failedChangeLanguage")                );
             }
 
             /*
@@ -216,8 +215,7 @@ function LanguageSelector() {
 
             setError(
                 error.message ||
-                t("unableChangeLanguage")
-            );
+                t("languageChange.unableChangeLanguage")            );
         } finally {
             setLoading(false);
         }
@@ -256,7 +254,7 @@ function LanguageSelector() {
             }
 
             const response = await fetch(
-                "http://localhost:5000/api/language/verify-french-otp",
+                `${API_BASE_URL}/api/language/verify-french-otp`,
                 {
                     method: "POST",
                     headers: {
@@ -378,7 +376,7 @@ function LanguageSelector() {
             }
 
             const response = await fetch(
-                "http://localhost:5000/api/language/request-french-otp",
+                `${API_BASE_URL}/api/language/request-french-otp`,
                 {
                     method: "POST",
                     headers: {

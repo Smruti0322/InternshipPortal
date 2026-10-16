@@ -14,7 +14,9 @@ const {
 } = require("../controllers/loginHistoryController");
 const {
     getActiveSessions,
-    signOutOtherDevices
+    signOutOtherDevices,
+    revokeSession,
+    logoutCurrentSession
 } = require("../controllers/sessionController");
 
 
@@ -71,5 +73,8 @@ router.post(
     authenticateToken,
     signOutOtherDevices
 );
+
+router.post("/sessions/:sessionId/revoke", authenticateToken, revokeSession);
+router.post("/sessions/logout", authenticateToken, logoutCurrentSession);
 
 module.exports = router;

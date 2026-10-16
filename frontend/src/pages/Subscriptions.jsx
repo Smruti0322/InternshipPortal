@@ -1,9 +1,11 @@
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next"; 
 import { Link } from "react-router-dom";
 import "./Subscriptions.css";
+import { API_BASE_URL } from "../config/api.js";
 
-const API = "http://localhost:5000";
+const API = API_BASE_URL;
 
 const loadRazorpayScript = () =>
     new Promise((resolve) => {
@@ -20,6 +22,8 @@ const loadRazorpayScript = () =>
     });
 
 function Subscriptions() {
+    const { t, i18n } = useTranslation();
+
     const token = localStorage.getItem("token");
 
     const [plans, setPlans] = useState([]);
@@ -40,7 +44,7 @@ function Subscriptions() {
     const request = useCallback(
         async (path, options = {}) => {
             if (!token) {
-                throw new Error("Please log in to continue.");
+                throw new Error(t("subscriptions.loginRequired"));
             }
 
             const response = await fetch(`${API}${path}`, {
@@ -56,7 +60,7 @@ function Subscriptions() {
 
             if (!response.ok) {
                 throw new Error(
-                    data.message || "Request failed. Please try again."
+                    data.message || t("subscriptions.requestFailed")
                 );
             }
 
@@ -126,11 +130,13 @@ function Subscriptions() {
     }, [request, token]);
 
     useEffect(() => {
-        loadPlans();
+        const initialLoad = window.setTimeout(() => loadPlans(), 0);
+        return () => window.clearTimeout(initialLoad);
     }, [loadPlans]);
 
     useEffect(() => {
-        loadHistory();
+        const initialLoad = window.setTimeout(() => loadHistory(), 0);
+        return () => window.clearTimeout(initialLoad);
     }, [loadHistory]);
 
     const activateFree = async () => {
@@ -325,8 +331,10 @@ function Subscriptions() {
 
     const formatLimit = (limit) =>
         limit === null || limit === undefined
-            ? "Unlimited applications"
-            : `${limit} application${Number(limit) === 1 ? "" : "s"} per billing cycle`;
+            ? t("subscriptions.unlimited")
+            : Number(limit) === 1
+                ? t("subscriptions.applicationSingle", { count: limit })
+                : t("subscriptions.applicationMultiple", { count: limit });
 
     const formatDate = (value) => {
         if (!value) return "-";
@@ -335,7 +343,7 @@ function Subscriptions() {
 
         return Number.isNaN(date.getTime())
             ? "-"
-            : date.toLocaleDateString("en-IN", {
+            : date.toLocaleDateString(i18n.language, {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
@@ -360,10 +368,10 @@ function Subscriptions() {
 
     const formatStatus = (status) => {
         const statuses = {
-            created: "Pending",
-            paid: "Paid",
-            failed: "Failed",
-            cancelled: "Cancelled",
+            created: t("subscriptions.pending"),
+            paid: t("subscriptions.paid"),
+            failed: t("subscriptions.failed"),
+            cancelled: t("subscriptions.cancelled"),
         };
 
         return statuses[String(status || "").toLowerCase()] ||
@@ -386,33 +394,36 @@ function Subscriptions() {
     return (
         <main className="subscription-page">
             <Link to="/" className="back-home-btn">
-                ← Back to Home
+                {t("subscriptions.backHome")}
             </Link>
 
             <header className="subscription-page-header">
                 <div>
-                    <p className="subscription-eyebrow">MEMBERSHIP</p>
-                    <h1>Choose Your Subscription</h1>
-                    <p>Pick a plan that fits your internship search.</p>
-                </div>
+                    <p className="subscription-eyebrow">
+                        {t("subscriptions.membership")}
+                    </p>
+                    <h1>{t("subscriptions.chooseSubscription")}</h1>
+                    <p>{t("subscriptions.subtitle")}</p>
 
-                <Link to="/internships" className="back-internships">
-                    Browse Internships
-                </Link>
+                    <Link to="/internships" className="back-internships">
+                        {t("subscriptions.browseInternships")}
+                    </Link>
+                </div>
             </header>
 
             {current && (
                 <section className="current-plan-banner">
                     <div>
-                        <span>YOUR CURRENT PLAN</span>
-                        <h2>{current.plan_name || "Free"}</h2>
+                        <span>{t("subscriptions.currentPlan")}</span>
+                        <h2>
+                            {t(`subscriptions.plans.${String(current.plan_name || "Free").toLowerCase()}`)}
+                        </h2>
                         <p>{formatLimit(current.application_limit)}</p>
                     </div>
 
                     {current.expires_at && (
                         <div>
-                            <span>VALID UNTIL</span>
-                            <strong>{formatDate(current.expires_at)}</strong>
+                            <span>{t("subscriptions.validUntil")}</span>                            <strong>{formatDate(current.expires_at)}</strong>
                         </div>
                     )}
                 </section>
@@ -427,8 +438,9 @@ function Subscriptions() {
             )}
 
             {loading ? (
-                <p className="subscription-loading">Loading plans...</p>
-            ) : (
+                <p className="subscription-loading">
+                    {t("subscriptions.loadingPlans")}
+                </p>            ) : (
                 <section className="subscription-plan-grid">
                     {plans.map((plan) => {
                         const isFree = plan.plan_name === "Free";
@@ -451,25 +463,20 @@ function Subscriptions() {
                             >
                                 {isCurrent && (
                                     <span className="current-plan-tag">
-                                        Current Plan
+                                        {t("subscriptions.planCurrent")}
                                     </span>
                                 )}
 
-                                <h2>{plan.plan_name}</h2>
+                                <h2>
+                                    {t(`subscriptions.plans.${String(plan.plan_name).toLowerCase()}`)}
+                                </h2>
 
-                                <p className="plan-price">
-                                    ₹{Number(plan.monthly_price).toLocaleString("en-IN")}
-                                    <span>/month</span>
-                                </p>
-
-                                <p className="plan-limit">
-                                    {formatLimit(plan.application_limit)}
-                                </p>
+                                <span>{t("subscriptions.perMonth")}</span>
 
                                 <ul>
-                                    <li>Apply to eligible internships</li>
-                                    <li>Track your application status</li>
-                                    <li>View your application history</li>
+                                    <li>{t("subscriptions.applyEligible")}</li>
+                                    <li>{t("subscriptions.trackStatus")}</li>
+                                    <li>{t("subscriptions.viewHistory")}</li>
                                 </ul>
 
                                 {isCurrent ? (
@@ -478,8 +485,7 @@ function Subscriptions() {
                                         className="plan-action"
                                         disabled
                                     >
-                                        Current Plan
-                                    </button>
+                                        {t("subscriptions.planCurrent")}                                    </button>
                                 ) : isFree ? (
                                     <button
                                         type="button"
@@ -490,11 +496,11 @@ function Subscriptions() {
                                         }
                                         onClick={activateFree}
                                     >
-                                        {paidPlanActive
-                                            ? "Cancel paid plan first"
-                                            : busyPlan === "Free"
-                                                ? "Activating..."
-                                                : "Activate Free"}
+                                            {paidPlanActive
+                                                ? t("subscriptions.cancelPaidFirst")
+                                                : busyPlan === "Free"
+                                                    ? t("subscriptions.activating")
+                                                    : t("subscriptions.activateFree")}
                                     </button>
                                 ) : (
                                     <button
@@ -503,9 +509,9 @@ function Subscriptions() {
                                         disabled={busyPlan !== null}
                                         onClick={() => buyPlan(plan)}
                                     >
-                                        {busyPlan === plan.plan_name
-                                            ? "Please wait..."
-                                            : "Choose Plan"}
+                                                {busyPlan === plan.plan_name
+                                                    ? t("subscriptions.pleaseWait")
+                                                    : t("subscriptions.choosePlan")}
                                     </button>
                                 )}
                             </article>
@@ -515,16 +521,14 @@ function Subscriptions() {
             )}
 
             <p className="payment-window-note">
-                Payments can be initiated only between 5:00 AM and
-                11:45 AM IST. Your plan activates after server-side
-                payment verification.
+                {t("subscriptions.paymentWindow")}
             </p>
 
             <section className="subscription-history">
                 <div className="subscription-history-heading">
                     <div>
-                        <h2>Payment History</h2>
-                        <p>View your subscription transactions and invoices.</p>
+                        <h2>{t("subscriptions.paymentHistory")}</h2>
+                        <p>{t("subscriptions.historySubtitle")}</p>
                     </div>
 
                     <div className="subscription-history-actions">
@@ -533,39 +537,39 @@ function Subscriptions() {
                             onClick={loadHistory}
                             disabled={historyLoading}
                         >
-                            {historyLoading ? "Refreshing..." : "Refresh History"}
+                            {historyLoading
+                                ? t("subscriptions.refreshing")
+                                : t("subscriptions.refreshHistory")}
                         </button>
 
                         <button
                             type="button"
                             onClick={showDemoInvoice}
                         >
-                            Preview Demo Invoice
-                        </button>
+                            {t("subscriptions.demoInvoice")}                        </button>
                     </div>
                 </div>
 
                 {historyLoading ? (
-                    <p>Loading payment history...</p>
-                ) : historyError ? (
+                    <p>{t("subscriptions.loadingHistory")}</p>                ) : historyError ? (
                     <p className="subscription-notice error">
                         {historyError}
                     </p>
                 ) : history.length === 0 ? (
-                    <p className="subscription-history-empty">
-                        No payment transactions found yet.
-                    </p>
+                            <p className="subscription-history-empty">
+                                {t("subscriptions.noTransactions")}
+                            </p>
                 ) : (
                     <div className="subscription-history-table-wrapper">
                         <table className="subscription-history-table">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Plan</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                    <th>Transaction ID</th>
-                                    <th>Invoice</th>
+                                                <th>{t("subscriptions.date")}</th>
+                                                <th>{t("subscriptions.plan")}</th>
+                                                <th>{t("subscriptions.amount")}</th>
+                                                <th>{t("subscriptions.status")}</th>
+                                                <th>{t("subscriptions.transactionId")}</th>
+                                                <th>{t("subscriptions.invoice")}</th>
                                 </tr>
                             </thead>
 
@@ -587,7 +591,13 @@ function Subscriptions() {
                                             }
                                         >
                                             <td>{formatDate(item.created_at)}</td>
-                                            <td>{item.plan_name || "-"}</td>
+                                            <td>
+                                                {item.plan_name
+                                                    ? t(`subscriptions.plans.${String(item.plan_name).toLowerCase()}`, {
+                                                        defaultValue: item.plan_name,
+                                                    })
+                                                    : "-"}
+                                            </td>
 
                                             <td>
                                                 ₹{Number(amount || 0).toLocaleString(
@@ -622,8 +632,7 @@ function Subscriptions() {
                                                         className="invoice-view-btn"
                                                         onClick={() => viewInvoice(item)}
                                                     >
-                                                        View Invoice
-                                                    </button>
+                                                        {t("subscriptions.viewInvoice")}                                                    </button>
                                                 ) : (
                                                     item.invoice_number || "-"
                                                 )}
@@ -640,7 +649,7 @@ function Subscriptions() {
             {invoiceLoading && (
                 <div className="invoice-overlay" role="status">
                     <div className="invoice-message">
-                        Loading invoice...
+                        {t("subscriptions.loadingInvoice")}
                     </div>
                 </div>
             )}
@@ -653,7 +662,7 @@ function Subscriptions() {
                             type="button"
                             onClick={() => setInvoiceError("")}
                         >
-                            Close
+                            {t("subscriptions.close")}
                         </button>
                     </section>
                 </div>
@@ -670,46 +679,45 @@ function Subscriptions() {
                                 type="button"
                                 onClick={printInvoice}
                             >
-                                Print / Save as PDF
-                            </button>
+                                {t("subscriptions.printInvoice")}                            </button>
 
                             <button
                                 type="button"
                                 onClick={closeInvoice}
                             >
-                                Close
+                                {t("subscriptions.close")}
                             </button>
                         </div>
 
                         <div className="invoice-heading">
                             <p className="subscription-eyebrow">
-                                INTERNSHIP PORTAL
+                                {t("subscriptions.portalName")}
                             </p>
 
                             {selectedInvoice.is_demo && (
                                 <p className="demo-invoice-warning">
-                                    SAMPLE — NOT A REAL PAYMENT
+                                    {t("subscriptions.sampleWarning")}
                                 </p>
                             )}
 
-                            <h2>Payment Invoice</h2>
-                            <p>Subscription payment receipt</p>
+                            <h2>{t("subscriptions.invoiceTitle")}</h2>
+                            <p>{t("subscriptions.invoiceSubtitle")}</p>
                         </div>
 
                         <div className="invoice-number-row">
-                            <span>Invoice Number</span>
+                            <span>{t("subscriptions.invoiceNumber")}</span>
                             <strong>{selectedInvoice.invoice_number || "-"}</strong>
                         </div>
 
                         <div className="invoice-detail-grid">
                             <div>
-                                <span>Bill To</span>
+                                <span>{t("subscriptions.billTo")}</span>
                                 <strong>{selectedInvoice.billing_name || "-"}</strong>
                                 <p>{selectedInvoice.billing_email || "-"}</p>
                             </div>
 
                             <div>
-                                <span>Invoice Date</span>
+                                <span>{t("subscriptions.invoiceDate")}</span>
                                 <strong>{formatDate(selectedInvoice.invoice_date)}</strong>
                             </div>
                         </div>
@@ -717,15 +725,18 @@ function Subscriptions() {
                         <table className="invoice-items-table">
                             <thead>
                                 <tr>
-                                    <th>Description</th>
-                                    <th>Amount</th>
+                                    <th>{t("subscriptions.description")}</th>
+                                    <th>{t("subscriptions.amount")}</th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 <tr>
                                     <td>
-                                        {selectedInvoice.plan_name} Monthly Subscription
+                                        {t(`subscriptions.plans.${String(selectedInvoice.plan_name || "").toLowerCase()}`, {
+                                            defaultValue: selectedInvoice.plan_name || "-",
+                                        })}{" "}
+                                        {t("subscriptions.monthlySubscription")}
                                     </td>
                                     <td>
                                         {selectedInvoice.currency || "INR"}{" "}
@@ -736,7 +747,12 @@ function Subscriptions() {
 
                             <tfoot>
                                 <tr>
-                                    <th>Total {selectedInvoice.is_demo ? " (Demo)" : "Paid"}</th>
+                                    <th>
+                                        {t("subscriptions.total")}{" "}
+                                        {selectedInvoice.is_demo
+                                            ? `(${t("subscriptions.demo")})`
+                                            : t("subscriptions.paid")}
+                                    </th>
                                     <th>
                                         {selectedInvoice.currency || "INR"}{" "}
                                         {formatInvoiceAmount(selectedInvoice.amount)}
@@ -746,48 +762,48 @@ function Subscriptions() {
                         </table>
 
                         <div className="invoice-payment-details">
-                            <h3>Payment Details</h3>
+                            <h3>{t("subscriptions.paymentDetails")}</h3>
 
                             <p>
-                                <span>Transaction ID</span>
+                                <span>{t("subscriptions.transactionId")}</span>
                                 <strong>
                                     {selectedInvoice.razorpay_payment_id || "-"}
                                 </strong>
                             </p>
 
                             <p>
-                                <span>Payment Date</span>
+                                <span>{t("subscriptions.paymentDate")}</span>
                                 <strong>{formatDateTime(selectedInvoice.paid_at)}</strong>
                             </p>
 
                             <p>
-                                <span>Status</span>
+                                <span>{t("subscriptions.status")}</span>
                                 <strong className={
                                     selectedInvoice.is_demo
                                         ? "invoice-demo-status"
                                         : "invoice-paid-status"
                                 }>
                                     {selectedInvoice.is_demo
-                                        ? "DEMO — NOT PAID"
-                                        : "Paid"}
+                                        ? t("subscriptions.demoNotPaid")
+                                        : t("subscriptions.paid")}
                                 </strong>
                             </p>
 
                             <p>
-                                <span>Subscription Starts</span>
+                                <span>{t("subscriptions.subscriptionStarts")}</span>
                                 <strong>{formatDate(selectedInvoice.started_at)}</strong>
                             </p>
 
                             <p>
-                                <span>Subscription Expires</span>
+                                <span>{t("subscriptions.subscriptionExpires")}</span>
                                 <strong>{formatDate(selectedInvoice.expires_at)}</strong>
                             </p>
                         </div>
 
                         <p className="invoice-footer">
                             {selectedInvoice.is_demo
-                                ? "This is a sample invoice for UI testing only. No payment was made."
-                                : "Thank you for choosing Internship Portal. Please keep this invoice for your records."}
+                                ? t("subscriptions.demoFooter")
+                                : t("subscriptions.invoiceFooter")}
                         </p>
                     </section>
                 </div>
