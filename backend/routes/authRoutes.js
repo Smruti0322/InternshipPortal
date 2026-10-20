@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("../middleware/rateLimit");
 
 const {
     register,
@@ -23,12 +24,14 @@ const {
 const authenticateToken = require("../middleware/authMiddleware");
 
 const router = express.Router();
+const limitLogin = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: "Too many login attempts. Try again later." });
+const limitLoginOtp = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: "Too many verification attempts. Try again later." });
 
 // Register
-router.post("/register", register);
+router.post("/register", limitLogin, register);
 
 // Login
-router.post("/login", login);
+router.post("/login", limitLogin, login);
 
 // Change Password (Protected)
 router.post(
@@ -39,11 +42,13 @@ router.post(
 
 router.post(
     "/login/request-otp",
+    limitLoginOtp,
     requestLoginOTP
 );
 
 router.post(
     "/login/verify-otp",
+    limitLoginOtp,
     verifyLoginOTP
 );
 

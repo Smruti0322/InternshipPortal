@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { generateOTP, generateTemporaryPassword, isExpired, hasAttemptsRemaining } = require("../utils/recoverySecurity");
 const { getDailyPostLimit } = require("../utils/postingRules");
+const { isSubscriptionPaymentWindowOpen } = require("../utils/paymentWindow");
 const crypto = require("crypto");
 const { verifyRazorpaySignature, isExpectedCapturedPayment } = require("../utils/razorpaySecurity");
 
@@ -28,6 +29,14 @@ test("community daily post limit follows friend count tiers", () => {
     assert.equal(getDailyPostLimit(6), 5);
     assert.equal(getDailyPostLimit(10), 5);
     assert.equal(getDailyPostLimit(11), null);
+});
+
+test("subscription order window uses the 5:00 AM to 11:45 PM IST boundaries", () => {
+    const at = (utc) => new Date(utc);
+    assert.equal(isSubscriptionPaymentWindowOpen(at("2026-10-15T23:29:00Z")), false); // 4:59 AM IST
+    assert.equal(isSubscriptionPaymentWindowOpen(at("2026-10-15T23:30:00Z")), true); // 5:00 AM IST
+    assert.equal(isSubscriptionPaymentWindowOpen(at("2026-10-16T18:15:00Z")), true); // 11:45 PM IST
+    assert.equal(isSubscriptionPaymentWindowOpen(at("2026-10-16T18:16:00Z")), false); // 11:46 PM IST
 });
 
 test("Razorpay signatures require a valid HMAC and reject malformed input", () => {

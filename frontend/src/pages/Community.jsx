@@ -2078,15 +2078,17 @@ function Community() {
     }
   };
 
+
   const getNotificationText = (notification) => {
-    const senderName = notification.sender_name || t("community.user");
+    const senderName =
+      notification.sender_name || t("community.user");
 
     switch (notification.type) {
       case "friend_request":
-        return t("community.friendRequestNotification", { senderName });
+        return `${senderName} sent you a friend request.`;
 
       case "friend_accepted":
-        return t("community.friendAcceptedNotification", { senderName });
+        return `${senderName} accepted your friend request.`;
 
       case "like":
         return t("community.likeNotification", { senderName });
@@ -2107,8 +2109,6 @@ function Community() {
         return t("community.mentionNotification", { senderName });
 
       case "system":
-        return notification.message || t("community.newNotification");
-
       default:
         return notification.message || t("community.newNotification");
     }
@@ -2263,6 +2263,7 @@ function Community() {
         </div>
 
         <div className="community-header-stats">
+        
           {/* NOTIFICATIONS */}
 
           <div className="notification-wrapper">

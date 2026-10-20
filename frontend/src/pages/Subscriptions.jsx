@@ -66,7 +66,7 @@ function Subscriptions() {
 
             return data;
         },
-        [token]
+        [token, t]
     );
 
     const loadPlans = useCallback(async () => {
@@ -160,6 +160,98 @@ function Subscriptions() {
         }
     };
 
+
+    const openCheckout = (data, plan) => {
+        const planName = plan.plan_name || plan.name;
+        const orderId = data.order?.id;
+
+        if (!orderId) {
+            throw new Error("Payment order ID is missing.");
+        }
+
+        const options = {
+            key: data.key_id,
+            amount: data.order.amount,
+            currency: data.order.currency,
+            name: "Internship Portal",
+            description: `${planName} Monthly Subscription`,
+            order_id: orderId,
+
+            handler: async (paymentResponse) => {
+                try {
+                    const verification = await request(
+                        "/api/subscriptions/verify-payment",
+                        {
+                            method: "POST",
+                            body: JSON.stringify(paymentResponse),
+                        }
+                    );
+
+                    setMessage(
+                        verification.already_verified
+                            ? "This payment was already verified. Check your subscription history."
+                            : `Payment verified! ${verification.plan_name || planName
+                            } plan activated. Invoice: ${verification.invoice_number ||
+                            "Check Payment History"
+                            }`
+                    );
+
+                    setError("");
+                    await Promise.all([loadPlans(), loadHistory()]);
+                } catch (err) {
+                    setError(
+                        `${err.message} If money was deducted, check Subscription History before paying again.`
+                    );
+                    await loadHistory();
+                } finally {
+                    setBusyPlan(null);
+                }
+            },
+
+            modal: {
+                ondismiss: () => {
+                    setBusyPlan(null);
+                    loadHistory();
+                },
+            },
+
+            theme: {
+                color: "#4f46e5",
+            },
+        };
+
+        const checkout = new window.Razorpay(options);
+
+        checkout.on("payment.failed", async (response) => {
+            try {
+                const failedOrderId =
+                    response?.error?.metadata?.order_id || orderId;
+
+                await request("/api/subscriptions/payment-failed", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        razorpay_order_id: failedOrderId,
+                    }),
+                });
+
+                await loadHistory();
+            } catch (err) {
+                console.error(
+                    "Failed to update payment status:",
+                    err.message
+                );
+            } finally {
+                setBusyPlan(null);
+                setError(
+                    response?.error?.description ||
+                    "Payment failed. Check Payment History before retrying."
+                );
+            }
+        });
+
+        checkout.open();
+    };
+
     const buyPlan = async (plan) => {
         if (busyPlan !== null) return;
 
@@ -184,94 +276,48 @@ function Subscriptions() {
                 }
             );
 
-            const orderId = data.order.id;
-
-            const options = {
-                key: data.key_id,
-                amount: data.order.amount,
-                currency: data.order.currency,
-                name: "Internship Portal",
-                description: `${plan.plan_name} Monthly Subscription`,
-                order_id: orderId,
-
-                handler: async (paymentResponse) => {
-                    try {
-                        const verification = await request(
-                            "/api/subscriptions/verify-payment",
-                            {
-                                method: "POST",
-                                body: JSON.stringify(paymentResponse),
-                            }
-                        );
-
-                        setMessage(
-                            verification.already_verified
-                                ? "This payment was already verified. Check your subscription history."
-                                : `Payment verified! ${verification.plan_name} plan activated. Invoice: ${verification.invoice_number ||
-                                "Check Payment History"
-                                }`
-                        );
-
-                        setError("");
-                        await Promise.all([loadPlans(), loadHistory()]);
-                    } catch (err) {
-                        setError(
-                            `${err.message} If money was deducted, check Subscription History before paying again.`
-                        );
-                        await loadHistory();
-                    } finally {
-                        setBusyPlan(null);
-                    }
-                },
-
-                modal: {
-                    ondismiss: () => {
-                        setBusyPlan(null);
-                    },
-                },
-
-                theme: {
-                    color: "#4f46e5",
-                },
-            };
-
-            const checkout = new window.Razorpay(options);
-
-            checkout.on("payment.failed", async (response) => {
-                try {
-                    const failedOrderId =
-                        response?.error?.metadata?.order_id || orderId;
-
-                    if (failedOrderId) {
-                        await request(
-                            "/api/subscriptions/payment-failed",
-                            {
-                                method: "POST",
-                                body: JSON.stringify({
-                                    razorpay_order_id: failedOrderId,
-                                }),
-                            }
-                        );
-                    }
-
-                    await loadHistory();
-                } catch (err) {
-                    console.error("Failed to update payment status:", err);
-                } finally {
-                    setBusyPlan(null);
-                    setError(
-                        response?.error?.description ||
-                        "Payment failed. Check Payment History before retrying."
-                    );
-                }
-            });
-
-            checkout.open();
+            openCheckout(data, plan);
         } catch (err) {
             setError(err.message);
             setBusyPlan(null);
+            await loadHistory();
         }
     };
+
+    const resumePayment = async (item) => {
+        if (busyPlan !== null) return;
+
+        setBusyPlan(item.plan_name);
+        setMessage("");
+        setError("");
+
+        try {
+            const scriptLoaded = await loadRazorpayScript();
+
+            if (!scriptLoaded) {
+                throw new Error(
+                    "Could not load Razorpay checkout. Check your internet connection."
+                );
+            }
+
+            const data = await request(
+                "/api/subscriptions/resume-order",
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        razorpay_order_id: item.razorpay_order_id,
+                    }),
+                }
+            );
+
+            openCheckout(data, data.plan);
+        } catch (err) {
+            setError(err.message);
+            setBusyPlan(null);
+            await loadHistory();
+        }
+    };
+
 
     // View an actual invoice from a verified payment
     const viewInvoice = async (payment) => {
@@ -471,7 +517,13 @@ function Subscriptions() {
                                     {t(`subscriptions.plans.${String(plan.plan_name).toLowerCase()}`)}
                                 </h2>
 
-                                <span>{t("subscriptions.perMonth")}</span>
+                                <p className="subscription-plan-price">
+                                    {Number(plan.monthly_price) === 0
+                                        ? "Free"
+                                        : `₹${Number(plan.monthly_price).toLocaleString("en-IN")}`}
+                                    {Number(plan.monthly_price) > 0 && ` ${t("subscriptions.perMonth")}`}
+                                </p>
+                                <p>{formatLimit(plan.application_limit)}</p>
 
                                 <ul>
                                     <li>{t("subscriptions.applyEligible")}</li>
@@ -625,6 +677,7 @@ function Subscriptions() {
                                                     "-"}
                                             </td>
 
+
                                             <td>
                                                 {isPaid && item.invoice_number ? (
                                                     <button
@@ -632,11 +685,25 @@ function Subscriptions() {
                                                         className="invoice-view-btn"
                                                         onClick={() => viewInvoice(item)}
                                                     >
-                                                        {t("subscriptions.viewInvoice")}                                                    </button>
+                                                        {t("subscriptions.viewInvoice")}
+                                                    </button>
+                                                ) : String(item.status || "").toLowerCase() === "created" &&
+                                                    item.razorpay_order_id ? (
+                                                    <button
+                                                        type="button"
+                                                        className="invoice-view-btn"
+                                                        disabled={busyPlan !== null}
+                                                        onClick={() => resumePayment(item)}
+                                                    >
+                                                        {busyPlan === item.plan_name
+                                                            ? t("subscriptions.pleaseWait")
+                                                            : "Continue Payment"}
+                                                    </button>
                                                 ) : (
                                                     item.invoice_number || "-"
                                                 )}
                                             </td>
+
                                         </tr>
                                     );
                                 })}

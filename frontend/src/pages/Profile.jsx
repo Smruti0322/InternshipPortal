@@ -191,7 +191,7 @@ function Profile() {
         };
 
         fetchSubscription();
-    }, [navigate]);
+    }, [navigate, t]);
 
     const getUserName = () => {
         if (!user) return t("profile.user");

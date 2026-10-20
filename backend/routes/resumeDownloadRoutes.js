@@ -8,6 +8,14 @@ const authenticateToken = require("../middleware/authMiddleware");
 const router = express.Router();
 router.use(authenticateToken);
 
+const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+})[character]);
+
 // =====================================================
 // EMAIL CONFIGURATION
 // =====================================================
@@ -79,6 +87,7 @@ router.post("/request-otp", async (req, res) => {
         // ---------------------------------------------
 
         const resumeEmail = resume.registered_email;
+        const safeName = escapeHtml(resume.full_name || "User");
 
         if (!resumeEmail) {
             return res.status(400).json({
@@ -205,7 +214,7 @@ router.post("/request-otp", async (req, res) => {
                     </h2>
 
                     <p>
-                        Hello ${resume.full_name || "User"},
+                        Hello ${safeName},
                     </p>
 
                     <p>

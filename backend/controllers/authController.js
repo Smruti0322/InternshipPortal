@@ -70,8 +70,6 @@ const login = async (req, res) => {
 
     const loginEnvironment = getLoginEnvironment(req);
 
-    console.log("Login Environment:", loginEnvironment);
-
     const { email, password } = req.body;
 
     if (!email || !password) {

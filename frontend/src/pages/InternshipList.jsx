@@ -8,7 +8,7 @@ import { API_BASE_URL } from "../config/api.js";
 
 
 function InternshipList() {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
 
     const [internships, setInternships] = useState([]);
     const [applications, setApplications] = useState([]);

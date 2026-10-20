@@ -7,11 +7,9 @@ import { API_BASE_URL } from "../config/api.js";
 const API_URL = API_BASE_URL;
 
 function ForgotPassword() {
-
     const { t } = useTranslation();
 
     const [step, setStep] = useState(1);
-
     const [identifier, setIdentifier] = useState("");
     const [method, setMethod] = useState("email");
     const [otp, setOtp] = useState("");
@@ -31,9 +29,7 @@ function ForgotPassword() {
         e.preventDefault();
 
         if (!identifier.trim()) {
-            setError(
-                t("forgotPassword.enterRegisteredEmail")
-            );
+            setError(t("forgotPassword.enterRegisteredEmail"));
             return;
         }
 
@@ -46,11 +42,9 @@ function ForgotPassword() {
                 `${API_URL}/api/forgot-password/request`,
                 {
                     method: "POST",
-
                     headers: {
                         "Content-Type": "application/json",
                     },
-
                     body: JSON.stringify({
                         identifier: identifier.trim(),
                         method,
@@ -67,15 +61,15 @@ function ForgotPassword() {
                 );
             }
 
-            // =========================
-            // SAVE RESET DETAILS
-            // =========================
+            if (!data.user_id || !data.reset_history_id) {
+                throw new Error(
+                    t("forgotPassword.resetSessionMissing")
+                );
+            }
 
             setUserId(data.user_id);
-
-            setResetHistoryId(
-                data.reset_history_id
-            );
+            setResetHistoryId(data.reset_history_id);
+            setOtp("");
 
             setSuccess(
                 data.message ||
@@ -83,19 +77,13 @@ function ForgotPassword() {
             );
 
             setStep(2);
-
         } catch (err) {
-
-            console.error(
-                "OTP Request Error:",
-                err
-            );
+            console.error("OTP Request Error:", err);
 
             setError(
                 err.message ||
                 t("forgotPassword.somethingWentWrong")
             );
-
         } finally {
             setLoading(false);
         }
@@ -108,33 +96,22 @@ function ForgotPassword() {
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
 
-        // =========================
-        // OTP VALIDATION
-        // =========================
-
         if (!otp.trim()) {
-            setError(
-                t("forgotPassword.enterOtpError")
-            );
+            setError(t("forgotPassword.enterOtpError"));
             return;
         }
 
-        if (otp.length !== 6) {
-            setError(
-                t("forgotPassword.validOtp")
-            );
+        if (!/^\d{6}$/.test(otp.trim())) {
+            setError(t("forgotPassword.validOtp"));
             return;
         }
 
         if (!userId || !resetHistoryId) {
-            setError(
-                t("forgotPassword.resetSessionMissing")
-            );
+            setError(t("forgotPassword.resetSessionMissing"));
             return;
         }
 
         try {
-
             setLoading(true);
             setError("");
             setSuccess("");
@@ -143,23 +120,19 @@ function ForgotPassword() {
                 `${API_URL}/api/forgot-password/verify-otp`,
                 {
                     method: "POST",
-
                     headers: {
                         "Content-Type": "application/json",
                     },
-
                     body: JSON.stringify({
                         user_id: userId,
-                        reset_history_id:
-                            resetHistoryId,
+                        reset_history_id: resetHistoryId,
                         otp: otp.trim(),
-                        method: "email",
+                        method,
                     }),
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(
@@ -174,19 +147,13 @@ function ForgotPassword() {
             );
 
             setStep(3);
-
         } catch (err) {
-
-            console.error(
-                "OTP Verification Error:",
-                err
-            );
+            console.error("OTP Verification Error:", err);
 
             setError(
                 err.message ||
                 t("forgotPassword.invalidOtp")
             );
-
         } finally {
             setLoading(false);
         }
@@ -197,134 +164,81 @@ function ForgotPassword() {
     // =================================================
 
     const handleBackToRequest = () => {
-
         setStep(1);
-
         setOtp("");
         setUserId(null);
         setResetHistoryId(null);
-
         setError("");
         setSuccess("");
     };
 
     return (
-
         <div className="auth-page">
-
             <div className="auth-container">
 
-                {/* =================================================
-                    LEFT INFORMATION SECTION
-                ================================================= */}
+                {/* LEFT INFORMATION SECTION */}
 
                 <div className="auth-info">
-
                     <div className="auth-logo">
-
-                        <span>
-                            IP
-                        </span>
-
+                        <span>IP</span>
                         <h2>
                             Internship
-                            <span>
-                                Portal
-                            </span>
+                            <span>Portal</span>
                         </h2>
-
                     </div>
 
                     <div className="auth-info-content">
-
                         <p className="auth-small-title">
                             {t("forgotPassword.accountRecovery")}
                         </p>
 
                         <h1>
-
                             {t("forgotPassword.recoverYour")}
-
                             <br />
-
                             <span>
                                 {t("forgotPassword.account")}
                             </span>
-
                         </h1>
 
-                        <p>
-                            {t(
-                                "forgotPassword.description"
-                            )}
-                        </p>
+                        <p>{t("forgotPassword.description")}</p>
 
                         <div className="auth-benefits">
-
                             <div>
                                 <span>✓</span>
-                                {t(
-                                    "forgotPassword.secureOtpVerification"
-                                )}
+                                {t("forgotPassword.secureOtpVerification")}
                             </div>
-
                             <div>
                                 <span>✓</span>
-                                {t(
-                                    "forgotPassword.temporaryPasswordRecovery"
-                                )}
+                                {t("forgotPassword.temporaryPasswordRecovery")}
                             </div>
-
                             <div>
                                 <span>✓</span>
-                                {t(
-                                    "forgotPassword.secureAccountAccess"
-                                )}
+                                {t("forgotPassword.secureAccountAccess")}
                             </div>
-
                             <div>
                                 <span>✓</span>
-                                {t(
-                                    "forgotPassword.changePasswordAfterLogin"
-                                )}
+                                {t("forgotPassword.changePasswordAfterLogin")}
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
 
-                {/* =================================================
-                    RIGHT FORM SECTION
-                ================================================= */}
+                {/* RIGHT FORM SECTION */}
 
                 <div className="auth-form-section">
-
                     <div className="auth-form-wrapper">
 
-                        {/* =================================================
-                            MOBILE LOGO
-                        ================================================= */}
+                        {/* MOBILE LOGO */}
 
                         <div className="mobile-auth-logo">
-
-                            <span>
-                                IP
-                            </span>
-
+                            <span>IP</span>
                             <h2>
                                 Internship
-                                <span>
-                                    Portal
-                                </span>
+                                <span>Portal</span>
                             </h2>
-
                         </div>
 
-                        {/* =================================================
-                            STEP INDICATOR
-                        ================================================= */}
+                        {/* STEP INDICATOR */}
 
                         <div
                             style={{
@@ -334,211 +248,117 @@ function ForgotPassword() {
                                 marginBottom: "22px",
                             }}
                         >
+                            {[1, 2, 3].map((number, index) => (
+                                <div
+                                    key={number}
+                                    style={{
+                                        display: "contents",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            width: "30px",
+                                            height: "30px",
+                                            flexShrink: 0,
+                                            borderRadius: "50%",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background:
+                                                step >= number
+                                                    ? "#155eef"
+                                                    : "#e5e7eb",
+                                            color:
+                                                step >= number
+                                                    ? "#ffffff"
+                                                    : "#64748b",
+                                            fontSize: "13px",
+                                            fontWeight: "700",
+                                        }}
+                                    >
+                                        {number}
+                                    </div>
 
-                            <div
-                                style={{
-                                    width: "30px",
-                                    height: "30px",
-                                    borderRadius: "50%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    background:
-                                        step >= 1
-                                            ? "#155eef"
-                                            : "#e5e7eb",
-                                    color:
-                                        step >= 1
-                                            ? "#ffffff"
-                                            : "#64748b",
-                                    fontSize: "13px",
-                                    fontWeight: "700",
-                                }}
-                            >
-                                1
-                            </div>
-
-                            <div
-                                style={{
-                                    flex: 1,
-                                    height: "2px",
-                                    background:
-                                        step >= 2
-                                            ? "#155eef"
-                                            : "#e5e7eb",
-                                }}
-                            />
-
-                            <div
-                                style={{
-                                    width: "30px",
-                                    height: "30px",
-                                    borderRadius: "50%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    background:
-                                        step >= 2
-                                            ? "#155eef"
-                                            : "#e5e7eb",
-                                    color:
-                                        step >= 2
-                                            ? "#ffffff"
-                                            : "#64748b",
-                                    fontSize: "13px",
-                                    fontWeight: "700",
-                                }}
-                            >
-                                2
-                            </div>
-
-                            <div
-                                style={{
-                                    flex: 1,
-                                    height: "2px",
-                                    background:
-                                        step >= 3
-                                            ? "#155eef"
-                                            : "#e5e7eb",
-                                }}
-                            />
-
-                            <div
-                                style={{
-                                    width: "30px",
-                                    height: "30px",
-                                    borderRadius: "50%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    background:
-                                        step >= 3
-                                            ? "#155eef"
-                                            : "#e5e7eb",
-                                    color:
-                                        step >= 3
-                                            ? "#ffffff"
-                                            : "#64748b",
-                                    fontSize: "13px",
-                                    fontWeight: "700",
-                                }}
-                            >
-                                3
-                            </div>
-
+                                    {index < 2 && (
+                                        <div
+                                            style={{
+                                                flex: 1,
+                                                height: "2px",
+                                                background:
+                                                    step > number
+                                                        ? "#155eef"
+                                                        : "#e5e7eb",
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            ))}
                         </div>
 
-                        {/* =================================================
-                            STEP LABEL
-                        ================================================= */}
+                        {/* STEP LABEL */}
 
                         <p className="form-welcome">
-
                             {step === 1 &&
                                 t("forgotPassword.accountRecovery")}
-
                             {step === 2 &&
                                 t("forgotPassword.otpVerification")}
-
                             {step === 3 &&
                                 t("forgotPassword.recoveryComplete")}
-
                         </p>
 
-                        {/* =================================================
-                            HEADING
-                        ================================================= */}
+                        {/* HEADING */}
 
                         <h2>
-
-                            {step === 1 &&
-                                t("common.reset")}
-
+                            {step === 1 && t("common.reset")}
                             {step === 2 &&
                                 t("forgotPassword.verifyOtpButton")}
-
                             {step === 3 &&
                                 t("forgotPassword.recoveryComplete")}
-
                         </h2>
 
-                        {/* =================================================
-                            DESCRIPTION
-                        ================================================= */}
+                        {/* DESCRIPTION */}
 
                         <p className="form-description">
-
                             {step === 1 &&
-                                t(
-                                    "forgotPassword.enterRegisteredEmailOtp"
-                                )}
-
+                                t("forgotPassword.enterRegisteredEmailOtp")}
                             {step === 2 &&
-                                t(
-                                    "forgotPassword.enterSixDigitOtp"
-                                )}
-
+                                t("forgotPassword.enterSixDigitOtp")}
                             {step === 3 &&
-                                t(
-                                    "forgotPassword.otpVerifiedCheckEmail"
-                                )}
-
+                                t("forgotPassword.otpVerifiedCheckEmail")}
                         </p>
 
-                        {/* =================================================
-                            ERROR MESSAGE
-                        ================================================= */}
+                        {/* ERROR MESSAGE */}
 
                         {error && (
-
-                            <div className="auth-message error">
+                            <div className="auth-message error" role="alert">
                                 {error}
                             </div>
-
                         )}
 
-                        {/* =================================================
-                            SUCCESS MESSAGE
-                        ================================================= */}
+                        {/* SUCCESS MESSAGE */}
 
                         {success && (
-
-                            <div className="auth-message success">
+                            <div
+                                className="auth-message success"
+                                role="status"
+                            >
                                 {success}
                             </div>
-
                         )}
 
-                        {/* =================================================
-                            STEP 1
-                        ================================================= */}
+                        {/* STEP 1: REQUEST OTP */}
 
                         {step === 1 && (
-
-                            <form
-                                onSubmit={
-                                    handleRequestOTP
-                                }
-                            >
-
-                                {/* =========================
-                                    VERIFICATION METHOD
-                                ========================= */}
-
+                            <form onSubmit={handleRequestOTP}>
                                 <div className="input-group">
-
                                     <label>
-                                        {t(
-                                            "forgotPassword.verificationMethod"
-                                        )}
+                                        {t("forgotPassword.verificationMethod")}
                                     </label>
 
                                     <select
                                         value={method}
                                         onChange={(e) => {
-                                            setMethod(
-                                                e.target.value
-                                            );
+                                            setMethod(e.target.value);
                                             setError("");
                                             setSuccess("");
                                         }}
@@ -555,15 +375,13 @@ function ForgotPassword() {
                                             outline: "none",
                                         }}
                                     >
-
                                         <option value="email">
-                                            {t("common.email")}
+                                            {t("forgotPassword.registeredEmail")}
                                         </option>
 
                                         <option value="phone" disabled>
-                                            {t("common.phoneNumber")} — SMS provider not configured
+                                            {t("forgotPassword.phoneNumber")}
                                         </option>
-
                                     </select>
 
                                     <small
@@ -574,23 +392,13 @@ function ForgotPassword() {
                                             fontSize: "12px",
                                         }}
                                     >
-                                        {t(
-                                            "forgotPassword.emailOtpAvailable"
-                                        )}
+                                        {t("forgotPassword.emailOtpAvailable")}
                                     </small>
-
                                 </div>
 
-                                {/* =========================
-                                    EMAIL
-                                ========================= */}
-
                                 <div className="input-group">
-
                                     <label>
-                                        {t(
-                                            "forgotPassword.registeredEmail"
-                                        )}
+                                        {t("forgotPassword.registeredEmail")}
                                     </label>
 
                                     <input
@@ -598,68 +406,37 @@ function ForgotPassword() {
                                         placeholder={t(
                                             "forgotPassword.enterRegisteredEmail"
                                         )}
-                                        value={
-                                            identifier
-                                        }
+                                        value={identifier}
                                         onChange={(e) => {
-                                            setIdentifier(
-                                                e.target.value
-                                            );
+                                            setIdentifier(e.target.value);
                                             setError("");
                                             setSuccess("");
                                         }}
                                         disabled={loading}
                                         autoComplete="email"
+                                        required
                                     />
-
                                 </div>
-
-                                {/* =========================
-                                    SEND OTP
-                                ========================= */}
 
                                 <button
                                     type="submit"
                                     className="auth-submit-btn"
                                     disabled={loading}
                                 >
-
                                     {loading
-                                        ? t(
-                                            "common.sendingOtp"
-                                        )
-                                        : t(
-                                            "forgotPassword.sendOtp"
-                                        )}
-
+                                        ? t("common.sendingOtp")
+                                        : t("forgotPassword.sendOtp")}
                                 </button>
-
                             </form>
-
                         )}
 
-                        {/* =================================================
-                            STEP 2
-                        ================================================= */}
+                        {/* STEP 2: VERIFY OTP */}
 
                         {step === 2 && (
-
-                            <form
-                                onSubmit={
-                                    handleVerifyOTP
-                                }
-                            >
-
-                                {/* =========================
-                                    OTP
-                                ========================= */}
-
+                            <form onSubmit={handleVerifyOTP}>
                                 <div className="input-group">
-
                                     <label>
-                                        {t(
-                                            "forgotPassword.enterOtpError"
-                                        )}
+                                        {t("forgotPassword.enterOtpError")}
                                     </label>
 
                                     <input
@@ -672,20 +449,16 @@ function ForgotPassword() {
                                         )}
                                         value={otp}
                                         onChange={(e) => {
-
                                             const value =
-                                                e.target.value.replace(
-                                                    /\D/g,
-                                                    ""
-                                                );
+                                                e.target.value.replace(/\D/g, "");
 
                                             setOtp(value);
                                             setError("");
                                             setSuccess("");
-
                                         }}
                                         disabled={loading}
                                         autoComplete="one-time-code"
+                                        required
                                         style={{
                                             letterSpacing: "5px",
                                             fontWeight: "600",
@@ -702,36 +475,19 @@ function ForgotPassword() {
                                             fontSize: "12px",
                                         }}
                                     >
-                                        {t(
-                                            "forgotPassword.sixDigitCodeSent"
-                                        )}
+                                        {t("forgotPassword.sixDigitCodeSent")}
                                     </small>
-
                                 </div>
-
-                                {/* =========================
-                                    VERIFY BUTTON
-                                ========================= */}
 
                                 <button
                                     type="submit"
                                     className="auth-submit-btn"
                                     disabled={loading}
                                 >
-
                                     {loading
-                                        ? t(
-                                            "common.verifying"
-                                        )
-                                        : t(
-                                            "forgotPassword.verifyOtpButton"
-                                        )}
-
+                                        ? t("common.verifying")
+                                        : t("forgotPassword.verifyOtpButton")}
                                 </button>
-
-                                {/* =========================
-                                    BACK BUTTON
-                                ========================= */}
 
                                 <div
                                     style={{
@@ -739,12 +495,9 @@ function ForgotPassword() {
                                         marginTop: "18px",
                                     }}
                                 >
-
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleBackToRequest
-                                        }
+                                        onClick={handleBackToRequest}
                                         disabled={loading}
                                         style={{
                                             border: "none",
@@ -752,35 +505,27 @@ function ForgotPassword() {
                                             color: "#155eef",
                                             fontWeight: "600",
                                             fontSize: "14px",
-                                            cursor: "pointer",
+                                            cursor: loading
+                                                ? "not-allowed"
+                                                : "pointer",
                                         }}
                                     >
                                         ← {t("common.back")}
                                     </button>
-
                                 </div>
-
                             </form>
-
                         )}
 
-                        {/* =================================================
-                            STEP 3
-                        ================================================= */}
+                        {/* STEP 3: RECOVERY COMPLETE */}
 
                         {step === 3 && (
-
                             <div>
-
                                 <div
                                     style={{
                                         textAlign: "center",
                                         padding: "10px 0 24px",
                                     }}
                                 >
-
-                                    {/* SUCCESS ICON */}
-
                                     <div
                                         style={{
                                             width: "64px",
@@ -806,9 +551,7 @@ function ForgotPassword() {
                                             fontSize: "20px",
                                         }}
                                     >
-                                        {t(
-                                            "forgotPassword.otpVerified"
-                                        )}
+                                        {t("forgotPassword.otpVerified")}
                                     </h3>
 
                                     <p
@@ -823,10 +566,7 @@ function ForgotPassword() {
                                             "forgotPassword.temporaryPasswordSent"
                                         )}
                                     </p>
-
                                 </div>
-
-                                {/* LOGIN BUTTON */}
 
                                 <Link
                                     to="/login"
@@ -839,37 +579,22 @@ function ForgotPassword() {
                                         boxSizing: "border-box",
                                     }}
                                 >
-                                    {t(
-                                        "forgotPassword.goToLogin"
-                                    )}
+                                    {t("forgotPassword.goToLogin")}
                                 </Link>
-
                             </div>
-
                         )}
 
-                        {/* =================================================
-                            LOGIN LINK
-                        ================================================= */}
+                        {/* LOGIN LINK */}
 
                         <p className="auth-switch">
-
-                            {t(
-                                "forgotPassword.rememberPassword"
-                            )}{" "}
-
+                            {t("forgotPassword.rememberPassword")}{" "}
                             <Link to="/login">
                                 {t("common.login")}
                             </Link>
-
                         </p>
-
                     </div>
-
                 </div>
-
             </div>
-
         </div>
     );
 }

@@ -1,3 +1,4 @@
+
 const jwt = require("jsonwebtoken");
 
 const {
@@ -6,101 +7,99 @@ const {
 } = require("../utils/sessionSecurity");
 
 const authenticateToken = async (req, res, next) => {
+    let stage = "reading authorization header";
+
     try {
-        const authHeader =
-            req.headers.authorization;
+        const authHeader = req.headers.authorization;
 
-        if (
-            !authHeader ||
-            !authHeader.startsWith("Bearer ")
-        ) {
-            console.warn(
-                "AUTH ERROR: Missing Bearer token"
-            );
-
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
             return res.status(401).json({
-                message:
-                    "Authentication required.",
+                message: "Authentication required.",
             });
         }
 
-        const token =
-            authHeader
-                .substring(7)
-                .trim();
+        const token = authHeader.substring(7).trim();
 
         if (!token) {
-            console.warn(
-                "AUTH ERROR: Empty token"
-            );
-
             return res.status(401).json({
-                message:
-                    "Authentication required.",
+                message: "Authentication required.",
             });
         }
 
-        // =========================
-        // VERIFY JWT
-        // =========================
-        const decoded =
-            jwt.verify(
-                token,
-                process.env.JWT_SECRET
-            );
+        stage = "verifying JWT";
 
-        // Keep existing user information
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+
         req.user = decoded;
-
-        // Keep current JWT available
         req.token = token;
 
-        // =========================
-        // TASK 5:
-        // CHECK SESSION REVOCATION
-        // =========================
-        const session =
-            await getActiveSession(token);
+        stage = "checking active session";
+
+        const session = await getActiveSession(token);
 
         if (!session) {
-            console.warn(
-                "AUTH ERROR: Session revoked or not found"
-            );
-
             return res.status(401).json({
                 message:
                     "Session expired or revoked. Please login again.",
             });
         }
 
-        // =========================
-        // UPDATE LAST ACTIVITY
-        // =========================
-        await updateSessionActivity(
-            session.id
-        );
+        stage = "updating session activity";
 
-        next();
+        await updateSessionActivity(session.id);
 
+        return next();
     } catch (error) {
-
-        console.error(
-            "JWT AUTH ERROR:",
-            {
+        // Invalid or expired JWT: return an authentication error.
+        if (
+            error.name === "TokenExpiredError" ||
+            error.name === "JsonWebTokenError" ||
+            error.name === "NotBeforeError"
+        ) {
+            console.warn("JWT verification failed:", {
                 name: error.name,
-                message: error.message,
-            }
-        );
+                stage,
+            });
 
-        return res.status(401).json({
-            message:
-                error.name ===
-                    "TokenExpiredError"
-                    ? "Token expired. Please login again."
-                    : "Invalid authentication token.",
+            return res.status(401).json({
+                message:
+                    error.name === "TokenExpiredError"
+                        ? "Token expired. Please login again."
+                        : "Invalid authentication token.",
+            });
+        }
+
+        // Infrastructure or unexpected error: do not mislabel it as an invalid token.
+        console.error("Authentication middleware failure:", {
+            stage,
+            name: error.name,
+            code: error.code,
+            errno: error.errno,
+            syscall: error.syscall,
+            message: error.message,
+        });
+
+        if (res.headersSent) {
+            return next(error);
+        }
+
+        const isConnectionError = [
+            "ECONNRESET",
+            "ECONNREFUSED",
+            "ETIMEDOUT",
+            "PROTOCOL_CONNECTION_LOST",
+            "ER_CON_COUNT_ERROR",
+        ].includes(error.code);
+
+        return res.status(isConnectionError ? 503 : 500).json({
+            message: isConnectionError
+                ? "Authentication service temporarily unavailable. Please try again."
+                : "Authentication could not be completed.",
         });
     }
 };
 
-module.exports =
-    authenticateToken;
+module.exports = authenticateToken;

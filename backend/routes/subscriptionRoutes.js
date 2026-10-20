@@ -5,6 +5,7 @@ const Razorpay = require("razorpay");
 const db = require("../config/db");
 const authenticateToken = require("../middleware/authMiddleware");
 const transporter = require("../config/emailTransporter");
+const { isSubscriptionPaymentWindowOpen } = require("../utils/paymentWindow");
 
 const router = express.Router();
 
@@ -22,21 +23,6 @@ const razorpay =
         : null;
 
 const CURRENCY = "INR";
-
-function isPaymentWindowOpen() {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-    }).formatToParts(new Date());
-
-    const hour = Number(parts.find((p) => p.type === "hour").value);
-    const minute = Number(parts.find((p) => p.type === "minute").value);
-    const minutes = hour * 60 + minute;
-
-    return minutes >= 300 && minutes < 705;
-}
 
 function addError(message, status = 400) {
     return Object.assign(new Error(message), { status });
@@ -224,6 +210,112 @@ router.post("/activate-free", async (req, res) => {
     }
 });
 
+
+// POST /api/subscriptions/resume-order
+// Reopens an existing pending Razorpay order for its owner.
+router.post("/resume-order", async (req, res) => {
+    try {
+        if (!razorpay) {
+            return res.status(503).json({
+                message: "Razorpay is not configured.",
+            });
+        }
+
+        if (!isSubscriptionPaymentWindowOpen()) {
+            return res.status(403).json({
+                message:
+                    "Payments are allowed only between 5:00 AM and 11:45 PM IST. Please try again during this time.",
+            });
+        }
+
+        const orderId = String(
+            req.body.razorpay_order_id || ""
+        ).trim();
+
+        if (!orderId) {
+            return res.status(400).json({
+                message: "Payment order ID is required.",
+            });
+        }
+
+        // Only allow the logged-in user to resume their own order.
+        const [rows] = await db.query(
+            `SELECT p.id, p.plan_id, p.razorpay_order_id,
+                    p.amount_paise, p.currency, p.status,
+                    pl.plan_name, pl.monthly_price,
+                    pl.application_limit
+             FROM subscription_payments p
+             JOIN subscription_plans pl ON pl.id = p.plan_id
+             WHERE p.razorpay_order_id = ?
+               AND p.user_id = ?
+             LIMIT 1`,
+            [orderId, req.user.id]
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({
+                message: "Payment order not found for this account.",
+            });
+        }
+
+        const savedPayment = rows[0];
+
+        if (savedPayment.status !== "created") {
+            return res.status(409).json({
+                message:
+                    "This payment is no longer pending. Refresh your payment history.",
+            });
+        }
+
+        const order = await razorpay.orders.fetch(orderId);
+
+        if (order.status !== "created") {
+            return res.status(409).json({
+                message:
+                    "This Razorpay order is no longer open. Refresh payment history and verify its status before retrying.",
+            });
+        }
+
+        if (
+            Number(order.amount) !== Number(savedPayment.amount_paise) ||
+            order.currency !== savedPayment.currency
+        ) {
+            return res.status(409).json({
+                message:
+                    "The order details do not match the saved payment. Please contact support.",
+            });
+        }
+
+        return res.json({
+            message: "Pending payment order retrieved.",
+            order,
+            key_id: keyId,
+            plan: {
+                id: savedPayment.plan_id,
+                plan_name: savedPayment.plan_name,
+                monthly_price: Number(savedPayment.monthly_price),
+                application_limit:
+                    savedPayment.application_limit === null
+                        ? null
+                        : Number(savedPayment.application_limit),
+            },
+        });
+    } catch (error) {
+        console.error(
+            "Resume subscription payment error:",
+            error.error?.description || error.message
+        );
+
+        return res.status(error.status || 500).json({
+            message:
+                error.status === 404
+                    ? "Payment order was not found at Razorpay."
+                    : "Could not resume payment. Refresh payment history and try again.",
+        });
+    }
+});
+
+
 // POST /api/subscriptions/create-order
 router.post("/create-order", async (req, res) => {
     try {
@@ -233,10 +325,10 @@ router.post("/create-order", async (req, res) => {
             });
         }
 
-        if (!isPaymentWindowOpen()) {
+        if (!isSubscriptionPaymentWindowOpen()) {
             return res.status(403).json({
                 message:
-                    "Payments are allowed only between 5:00 AM and 11:45 AM IST. Please try again during this time.",
+                    "Payments are allowed only between 5:00 AM and 11:45 PM IST. Please try again during this time.",
             });
         }
 

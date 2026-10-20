@@ -1,7 +1,16 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const db = require("../config/db");
 const { generateOTP, generateTemporaryPassword, isExpired, hasAttemptsRemaining } = require("../utils/recoverySecurity");
+
+const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+})[character]);
 
 /*
 =========================================
@@ -60,11 +69,6 @@ const requestOTP = async (req, res) => {
             if (!/^\+?[1-9]\d{7,14}$/.test(normalizedPhone)) {
                 return res.status(400).json({ message: "Enter a valid registered mobile number." });
             }
-            const [phoneUsers] = await db.execute(
-                "SELECT id FROM users WHERE mobile = ? LIMIT 1",
-                [normalizedPhone]
-            );
-            if (!phoneUsers.length) return res.status(404).json({ message: "No account found with this mobile number." });
             return res.status(501).json({ message: "Mobile recovery is unavailable until an SMS provider is configured." });
         }
         if (resetMethod !== "email") {
@@ -84,8 +88,11 @@ const requestOTP = async (req, res) => {
         user = rows[0];
 
         if (!user) {
-            return res.status(404).json({
-                message: "No account found with this email address."
+            return res.status(200).json({
+                success: true,
+                message: "If an account matches that email address, recovery instructions will be sent.",
+                user_id: crypto.randomInt(1, 2 ** 31),
+                reset_history_id: crypto.randomInt(1, 2 ** 31)
             });
         }
 
@@ -93,16 +100,16 @@ const requestOTP = async (req, res) => {
         await connection.beginTransaction();
         transactionStarted = true;
         await connection.execute("SELECT id FROM users WHERE id = ? FOR UPDATE", [user.id]);
-        const [recentRequests] = await connection.execute(
-            "SELECT id FROM password_reset_history WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1 FOR UPDATE",
+        const [recentSuccessfulResets] = await connection.execute(
+            "SELECT id FROM password_reset_history WHERE user_id = ? AND status = 'completed' AND verification_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1 FOR UPDATE",
             [user.id]
         );
-        if (recentRequests.length) {
+        if (recentSuccessfulResets.length) {
             await connection.rollback();
             transactionStarted = false;
             connection.release();
             connection = null;
-            return res.status(429).json({ message: "A password recovery request was already made in the last 24 hours." });
+            return res.status(429).json({ message: "You can use this option only once per day" });
         }
         /*
         -----------------------------------------
@@ -169,6 +176,7 @@ const requestOTP = async (req, res) => {
         */
 
         if (resetMethod === "email") {
+            const safeName = escapeHtml(user.name || "User");
 
             await transporter.sendMail({
                 from: process.env.SMTP_USER,
@@ -178,7 +186,7 @@ const requestOTP = async (req, res) => {
                     <div style="font-family: Arial, sans-serif; padding: 20px;">
                         <h2>Password Reset</h2>
 
-                        <p>Hello ${user.name || "User"},</p>
+                        <p>Hello ${safeName},</p>
 
                         <p>
                             Your OTP for resetting your Internship Portal
@@ -219,7 +227,7 @@ const requestOTP = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "OTP sent successfully.",
+            message: "If an account matches that email address, recovery instructions will be sent.",
             user_id: user.id,
             reset_history_id: resetHistoryId
         });
@@ -234,8 +242,7 @@ const requestOTP = async (req, res) => {
         console.error("REQUEST OTP ERROR:", error);
 
         return res.status(500).json({
-            message: "Unable to send OTP.",
-            error: error.message
+            message: "Unable to send OTP."
         });
     }
 };
@@ -278,6 +285,8 @@ const verifyOTP = async (req, res) => {
         connection = await db.getConnection();
         await connection.beginTransaction();
         transactionStarted = true;
+        // Keep the lock order consistent with requestOTP and serialize reset success per user.
+        await connection.execute("SELECT id FROM users WHERE id = ? FOR UPDATE", [user_id]);
         const [rows] = await connection.execute(
             `
     SELECT *
@@ -349,6 +358,18 @@ const verifyOTP = async (req, res) => {
             return res.status(attempts >= 5 ? 429 : 400).json({ message: attempts >= 5 ? "Too many invalid attempts." : "Invalid OTP." });
         }
 
+        const [recentSuccessfulResets] = await connection.execute(
+            "SELECT id FROM password_reset_history WHERE user_id = ? AND status = 'completed' AND verification_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1 FOR UPDATE",
+            [user_id]
+        );
+        if (recentSuccessfulResets.length) {
+            await connection.rollback();
+            transactionStarted = false;
+            connection.release();
+            connection = null;
+            return res.status(429).json({ message: "You can use this option only once per day" });
+        }
+
 
         /*
         -----------------------------------------
@@ -397,6 +418,7 @@ const verifyOTP = async (req, res) => {
 
                 const user = userRows[0];
 
+                const safeName = escapeHtml(user.name || "User");
                 await transporter.sendMail({
                     from: process.env.SMTP_USER,
                     to: user.email,
@@ -407,7 +429,7 @@ const verifyOTP = async (req, res) => {
                             <h2>Password Reset Successful</h2>
 
                             <p>
-                                Hello ${user.name || "User"},
+                                Hello ${safeName},
                             </p>
 
                             <p>
@@ -479,7 +501,6 @@ const verifyOTP = async (req, res) => {
 
         return res.status(error.status || 500).json({
             message: "Unable to verify OTP.",
-            error: error.message
         });
     }
 };

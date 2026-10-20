@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const { generateOTP } = require("../utils/recoverySecurity");
 
 const { createUserSession } = require("../utils/sessionSecurity");
 
@@ -16,14 +17,6 @@ const transporter = nodemailer.createTransport({
         pass: process.env.SMTP_PASS
     }
 });
-
-// =========================================================
-// GENERATE OTP
-// =========================================================
-
-const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-};
 
 // =========================================================
 // LOGIN OTP EMAIL TRANSLATIONS

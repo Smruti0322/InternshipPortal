@@ -3,6 +3,14 @@ const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const { getClientIp } = require("../utils/loginEnvironment");
 
+const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+})[character]);
+
 const supportedLanguages = [
     "en",
     "es",
@@ -550,6 +558,7 @@ const requestFrenchOtp = async (req, res) => {
 
         const emailText =
             otpEmailTranslations[currentLanguage];
+        const safeName = escapeHtml(user.name || "User");
 
         /*
         -------------------------------------------------
@@ -600,7 +609,7 @@ const requestFrenchOtp = async (req, res) => {
                         </h2>
 
                         <p>
-                            ${emailText.hello} ${user.name || "User"},
+                            ${emailText.hello} ${safeName},
                         </p>
 
                         <p>

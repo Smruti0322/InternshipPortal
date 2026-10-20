@@ -186,6 +186,7 @@
         "verificationMethod": "सत्यापन विधि",
         "emailOtpAvailable": "ईमेल OTP उपलब्ध है",
         "registeredEmail": "पंजीकृत ईमेल",
+        "phoneNumber": "फ़ोन नंबर",
         "enterRegisteredEmail": "पंजीकृत ईमेल दर्ज करें",
         "sendingOtp": "OTP भेजा जा रहा है...",
         "sendOtp": "OTP भेजें",

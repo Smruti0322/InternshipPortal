@@ -626,11 +626,6 @@ function ViewResume() {
                 resume?.templateName ||
                 "classic";
 
-            const fontFamily =
-                resume?.font_family ||
-                resume?.fontFamily ||
-                "helvetica";
-
             
             const name = getFullName();
             const resumeName =
@@ -2763,7 +2758,6 @@ function ViewResume() {
                 data={value}
                 accentColor={accentColor}
                 socialLinks={key === "socialLinks"}
-                t={t}
                 labels={resumeLabels}
             />
         );
@@ -3266,7 +3260,6 @@ function ResumeSection({
     data,
     accentColor,
     socialLinks = false,
-    t,
     labels = RESUME_LABELS.en,
 }) {
         const renderValue = (

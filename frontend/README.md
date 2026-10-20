@@ -100,10 +100,7 @@ Create a `.env` file in the backend folder using `.env.example` as a reference. 
 
 ### 3. Configure the Database
 
-1. Start MySQL.
-2. Create the database named `internship_portal`.
-3. Import the database schema or SQL setup file provided with the project.
-4. Update the database configuration in your local `.env` file.
+Follow the repository root [README](../README.md) for the supported MySQL version and safe database setup. The new development setup creates `internship_portal_dev` only; do not import it into an existing or production database. Configure backend database variables in `backend/.env` using names from `backend/.env.example`.
 
 ### 4. Start the Backend
 
