@@ -1,26 +1,29 @@
+
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const { generateOTP } = require("../utils/recoverySecurity");
-
 const { createUserSession } = require("../utils/sessionSecurity");
 
 // =========================================================
-// EMAIL TRANSPORTER
+// RESEND EMAIL CLIENT
 // =========================================================
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+const getResendClient = () => {
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY is not configured.");
     }
-});
+
+    if (!process.env.RESEND_FROM_EMAIL) {
+        throw new Error("RESEND_FROM_EMAIL is not configured.");
+    }
+
+    return new Resend(process.env.RESEND_API_KEY);
+};
 
 // =========================================================
 // LOGIN OTP EMAIL TRANSLATIONS
-// Supported languages: en, hi, fr, es, pt, zh
 // =========================================================
 
 const LOGIN_OTP_EMAILS = {
@@ -34,7 +37,6 @@ const LOGIN_OTP_EMAILS = {
         attempts: "You have a maximum of 5 verification attempts.",
         security: "If you did not attempt to log in, please secure your account immediately."
     },
-
     hi: {
         subject: "इंटर्नशिप पोर्टल - लॉगिन सत्यापन OTP",
         title: "लॉगिन सत्यापन",
@@ -45,7 +47,6 @@ const LOGIN_OTP_EMAILS = {
         attempts: "आप अधिकतम 5 बार OTP सत्यापित करने का प्रयास कर सकते हैं।",
         security: "यदि आपने लॉगिन करने का प्रयास नहीं किया है, तो कृपया तुरंत अपने खाते को सुरक्षित करें।"
     },
-
     fr: {
         subject: "Portail de stages - Code OTP de connexion",
         title: "Vérification de connexion",
@@ -56,7 +57,6 @@ const LOGIN_OTP_EMAILS = {
         attempts: "Vous disposez de 5 tentatives maximum de vérification.",
         security: "Si vous n'êtes pas à l'origine de cette connexion, sécurisez immédiatement votre compte."
     },
-
     es: {
         subject: "Portal de prácticas - Código OTP de inicio de sesión",
         title: "Verificación de inicio de sesión",
@@ -67,7 +67,6 @@ const LOGIN_OTP_EMAILS = {
         attempts: "Dispones de un máximo de 5 intentos de verificación.",
         security: "Si no intentaste iniciar sesión, protege tu cuenta inmediatamente."
     },
-
     pt: {
         subject: "Portal de Estágios - Código OTP de Login",
         title: "Verificação de Login",
@@ -78,7 +77,6 @@ const LOGIN_OTP_EMAILS = {
         attempts: "Você tem no máximo 5 tentativas de verificação.",
         security: "Se não tentou iniciar sessão, proteja imediatamente a sua conta."
     },
-
     zh: {
         subject: "实习门户 - 登录验证码",
         title: "登录验证",
@@ -110,10 +108,7 @@ const escapeHtml = (value = "") => {
 // =========================================================
 
 const hashOTP = (otp) => {
-    return crypto
-        .createHash("sha256")
-        .update(otp)
-        .digest("hex");
+    return crypto.createHash("sha256").update(otp).digest("hex");
 };
 
 // =========================================================
@@ -147,32 +142,18 @@ const createDeviceIdentifier = ({
 // MARK DEVICE AS TRUSTED
 // =========================================================
 
-const markDeviceAsTrusted = async ({
-    userId,
-    loginHistoryId
-}) => {
+const markDeviceAsTrusted = async ({ userId, loginHistoryId }) => {
     const [historyRows] = await db.execute(
-        `
-        SELECT
-            browser_name,
-            browser_version,
-            operating_system,
-            os_version,
-            device_type,
-            device_model,
-            ip_address
-        FROM login_history
-        WHERE id = ?
-          AND user_id = ?
-        LIMIT 1
-        `,
+        `SELECT browser_name, browser_version, operating_system,
+                os_version, device_type, device_model, ip_address
+         FROM login_history
+         WHERE id = ? AND user_id = ?
+         LIMIT 1`,
         [loginHistoryId, userId]
     );
 
     if (historyRows.length === 0) {
-        throw new Error(
-            "Login history not found while marking trusted device."
-        );
+        throw new Error("Login history not found while marking trusted device.");
     }
 
     const history = historyRows[0];
@@ -187,25 +168,12 @@ const markDeviceAsTrusted = async ({
     });
 
     await db.execute(
-        `
-        INSERT INTO trusted_devices
-        (
-            user_id,
-            device_identifier,
-            browser_name,
-            browser_version,
-            operating_system,
-            os_version,
-            device_type,
-            device_model,
-            last_ip_address,
-            first_seen_at,
-            last_seen_at,
-            trusted_at,
-            is_active
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW(), 1)
-        ON DUPLICATE KEY UPDATE
+        `INSERT INTO trusted_devices
+         (user_id, device_identifier, browser_name, browser_version,
+          operating_system, os_version, device_type, device_model,
+          last_ip_address, first_seen_at, last_seen_at, trusted_at, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW(), 1)
+         ON DUPLICATE KEY UPDATE
             browser_name = VALUES(browser_name),
             browser_version = VALUES(browser_version),
             operating_system = VALUES(operating_system),
@@ -215,8 +183,7 @@ const markDeviceAsTrusted = async ({
             last_ip_address = VALUES(last_ip_address),
             last_seen_at = NOW(),
             trusted_at = COALESCE(trusted_at, NOW()),
-            is_active = 1
-        `,
+            is_active = 1`,
         [
             userId,
             deviceIdentifier,
@@ -234,6 +201,73 @@ const markDeviceAsTrusted = async ({
 };
 
 // =========================================================
+// SEND LOGIN OTP EMAIL THROUGH RESEND HTTPS API
+// =========================================================
+
+const sendLoginOTPEmail = async ({ user, otp, emailText }) => {
+    const resend = getResendClient();
+    const safeName = escapeHtml(user.name || "User");
+
+    const { data, error } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: [user.email],
+        subject: emailText.subject,
+        text: [
+            `${emailText.greeting} ${user.name || "User"},`,
+            "",
+            emailText.intro,
+            "",
+            `${emailText.code} ${otp}`,
+            emailText.expiry,
+            emailText.attempts,
+            "",
+            emailText.security
+        ].join("\n"),
+        html: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;
+                        margin:0 auto;padding:24px;line-height:1.7;
+                        color:#1e293b;background:#ffffff">
+                <h2 style="margin-top:0;color:#1d4ed8">
+                    ${emailText.title}
+                </h2>
+                <p>${emailText.greeting} ${safeName},</p>
+                <p>${emailText.intro}</p>
+                <p>${emailText.code}</p>
+                <div style="margin:24px 0;padding:18px;text-align:center;
+                            background:#f1f5f9;border-radius:8px">
+                    <span style="font-size:32px;font-weight:bold;
+                                 letter-spacing:8px;color:#1d4ed8">
+                        ${otp}
+                    </span>
+                </div>
+                <p>${emailText.expiry}</p>
+                <p>${emailText.attempts}</p>
+                <p style="margin-top:24px;color:#475569">
+                    ${emailText.security}
+                </p>
+            </div>
+        `
+    });
+
+    if (error) {
+        // Do not log the OTP or API key.
+        console.error("RESEND EMAIL ERROR:", {
+            name: error.name,
+            message: error.message,
+            statusCode: error.statusCode
+        });
+
+        throw new Error("Login verification email could not be sent.");
+    }
+
+    if (!data || !data.id) {
+        throw new Error("Email provider did not confirm the email request.");
+    }
+
+    return data.id;
+};
+
+// =========================================================
 // REQUEST LOGIN OTP
 // POST /api/auth/login/request-otp
 // =========================================================
@@ -246,7 +280,6 @@ const requestLoginOTP = async (req, res) => {
     try {
         const { user_id, login_history_id } = req.body;
 
-        // VALIDATION
         if (!user_id || !login_history_id) {
             return res.status(400).json({
                 success: false,
@@ -254,18 +287,11 @@ const requestLoginOTP = async (req, res) => {
             });
         }
 
-        // FIND USER AND SAVED LANGUAGE
         const [users] = await db.execute(
-            `
-            SELECT
-                id,
-                name,
-                email,
-                preferred_language
-            FROM users
-            WHERE id = ?
-            LIMIT 1
-            `,
+            `SELECT id, name, email, preferred_language
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
             [user_id]
         );
 
@@ -278,20 +304,16 @@ const requestLoginOTP = async (req, res) => {
 
         const user = users[0];
 
-        // VERIFY LOGIN HISTORY
         connection = await db.getConnection();
         await connection.beginTransaction();
         transactionStarted = true;
 
         const [history] = await connection.execute(
-            `
-            SELECT id, login_status
-            FROM login_history
-            WHERE id = ?
-              AND user_id = ?
-            LIMIT 1
-            FOR UPDATE
-            `,
+            `SELECT id, login_status
+             FROM login_history
+             WHERE id = ? AND user_id = ?
+             LIMIT 1
+             FOR UPDATE`,
             [login_history_id, user_id]
         );
 
@@ -307,26 +329,22 @@ const requestLoginOTP = async (req, res) => {
             });
         }
 
-        // RESEND OTP RATE LIMIT: 60 SECONDS
+        // Rate limit: one OTP request per 60 seconds for this login.
         const [recentVerifications] = await connection.execute(
-            `
-            SELECT created_at
-            FROM login_verifications
-            WHERE user_id = ?
-              AND login_history_id = ?
-              AND verification_type = 'login_otp'
-            ORDER BY created_at DESC
-            LIMIT 1
-            `,
+            `SELECT created_at
+             FROM login_verifications
+             WHERE user_id = ?
+               AND login_history_id = ?
+               AND verification_type = 'login_otp'
+             ORDER BY created_at DESC
+             LIMIT 1`,
             [user_id, login_history_id]
         );
 
         if (recentVerifications.length > 0) {
             const elapsed = Math.floor(
-                (
-                    Date.now() -
-                    new Date(recentVerifications[0].created_at).getTime()
-                ) / 1000
+                (Date.now() -
+                    new Date(recentVerifications[0].created_at).getTime()) / 1000
             );
 
             if (elapsed >= 0 && elapsed < 60) {
@@ -345,46 +363,25 @@ const requestLoginOTP = async (req, res) => {
             }
         }
 
-        // EXPIRE PREVIOUS PENDING OTPs
         await connection.execute(
-            `
-            UPDATE login_verifications
-            SET status = 'expired'
-            WHERE user_id = ?
-              AND login_history_id = ?
-              AND status = 'pending'
-            `,
+            `UPDATE login_verifications
+             SET status = 'expired'
+             WHERE user_id = ?
+               AND login_history_id = ?
+               AND status = 'pending'`,
             [user_id, login_history_id]
         );
 
-        // GENERATE OTP
         const otp = generateOTP();
         const otpHash = hashOTP(otp);
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        // STORE OTP HASH
         const [result] = await connection.execute(
-            `
-            INSERT INTO login_verifications
-            (
-                user_id,
-                login_history_id,
-                verification_type,
-                otp_hash,
-                expires_at,
-                attempts,
-                max_attempts,
-                status,
-                created_at
-            )
-            VALUES (?, ?, 'login_otp', ?, ?, 0, 5, 'pending', NOW())
-            `,
-            [
-                user_id,
-                login_history_id,
-                otpHash,
-                expiresAt
-            ]
+            `INSERT INTO login_verifications
+             (user_id, login_history_id, verification_type, otp_hash,
+              expires_at, attempts, max_attempts, status, created_at)
+             VALUES (?, ?, 'login_otp', ?, ?, 0, 5, 'pending', NOW())`,
+            [user_id, login_history_id, otpHash, expiresAt]
         );
 
         verificationRecordId = result.insertId;
@@ -394,13 +391,7 @@ const requestLoginOTP = async (req, res) => {
         connection.release();
         connection = null;
 
-        // =====================================================
-        // SEND OTP EMAIL IN USER'S SAVED LANGUAGE
-        // =====================================================
-
-        const emailLanguage = String(
-            user.preferred_language || "en"
-        )
+        const emailLanguage = String(user.preferred_language || "en")
             .trim()
             .toLowerCase()
             .split(/[-_]/)[0];
@@ -408,100 +399,15 @@ const requestLoginOTP = async (req, res) => {
         const emailText =
             LOGIN_OTP_EMAILS[emailLanguage] || LOGIN_OTP_EMAILS.en;
 
-        const safeName = escapeHtml(user.name || "User");
+        // Email must succeed before the request is reported as successful.
+        await sendLoginOTPEmail({ user, otp, emailText });
 
-        await transporter.sendMail({
-            from: process.env.SMTP_USER,
-            to: user.email,
-            subject: emailText.subject,
-
-            text: [
-                `${emailText.greeting} ${user.name || "User"},`,
-                "",
-                emailText.intro,
-                "",
-                `${emailText.code} ${otp}`,
-                emailText.expiry,
-                emailText.attempts,
-                "",
-                emailText.security
-            ].join("\n"),
-
-            html: `
-                <div style="
-                    font-family: Arial, sans-serif;
-                    max-width: 600px;
-                    margin: 0 auto;
-                    padding: 24px;
-                    line-height: 1.7;
-                    color: #1e293b;
-                    background-color: #ffffff;
-                ">
-                    <h2 style="
-                        margin-top: 0;
-                        color: #1d4ed8;
-                    ">
-                        ${emailText.title}
-                    </h2>
-
-                    <p>
-                        ${emailText.greeting} ${safeName},
-                    </p>
-
-                    <p>
-                        ${emailText.intro}
-                    </p>
-
-                    <p>
-                        ${emailText.code}
-                    </p>
-
-                    <div style="
-                        margin: 24px 0;
-                        padding: 18px;
-                        text-align: center;
-                        background-color: #f1f5f9;
-                        border-radius: 8px;
-                    ">
-                        <span style="
-                            font-size: 32px;
-                            font-weight: bold;
-                            letter-spacing: 8px;
-                            color: #1d4ed8;
-                        ">
-                            ${otp}
-                        </span>
-                    </div>
-
-                    <p>
-                        ${emailText.expiry}
-                    </p>
-
-                    <p>
-                        ${emailText.attempts}
-                    </p>
-
-                    <p style="
-                        margin-top: 24px;
-                        color: #475569;
-                    ">
-                        ${emailText.security}
-                    </p>
-                </div>
-            `
-        });
-
-        // UPDATE LOGIN HISTORY
         await db.execute(
-            `
-            UPDATE login_history
-            SET
-                login_status = 'otp_required',
-                otp_required = 1,
-                otp_verified = 0
-            WHERE id = ?
-              AND user_id = ?
-            `,
+            `UPDATE login_history
+             SET login_status = 'otp_required',
+                 otp_required = 1,
+                 otp_verified = 0
+             WHERE id = ? AND user_id = ?`,
             [login_history_id, user_id]
         );
 
@@ -516,23 +422,19 @@ const requestLoginOTP = async (req, res) => {
             if (transactionStarted) {
                 await connection.rollback().catch(() => { });
             }
-
             connection.release();
         }
 
         if (verificationRecordId) {
             await db.execute(
-                `
-                UPDATE login_verifications
-                SET status = 'failed'
-                WHERE id = ?
-                  AND status = 'pending'
-                `,
+                `UPDATE login_verifications
+                 SET status = 'failed'
+                 WHERE id = ? AND status = 'pending'`,
                 [verificationRecordId]
             ).catch(() => { });
         }
 
-        console.error("REQUEST LOGIN OTP ERROR:", error);
+        console.error("REQUEST LOGIN OTP ERROR:", error.message);
 
         return res.status(500).json({
             success: false,
@@ -558,34 +460,25 @@ const verifyLoginOTP = async (req, res) => {
             otp
         } = req.body;
 
-        // VALIDATION
-        if (
-            !user_id ||
-            !login_history_id ||
-            !verification_id ||
-            !otp
-        ) {
+        if (!user_id || !login_history_id || !verification_id || !otp) {
             return res.status(400).json({
                 success: false,
                 message: "Verification details are required."
             });
         }
 
-        // GET VERIFICATION RECORD
         connection = await db.getConnection();
         await connection.beginTransaction();
         transactionStarted = true;
 
         const [rows] = await connection.execute(
-            `
-            SELECT *
-            FROM login_verifications
-            WHERE id = ?
-              AND user_id = ?
-              AND login_history_id = ?
-            LIMIT 1
-            FOR UPDATE
-            `,
+            `SELECT *
+             FROM login_verifications
+             WHERE id = ?
+               AND user_id = ?
+               AND login_history_id = ?
+             LIMIT 1
+             FOR UPDATE`,
             [verification_id, user_id, login_history_id]
         );
 
@@ -603,7 +496,6 @@ const verifyLoginOTP = async (req, res) => {
 
         const verification = rows[0];
 
-        // ALREADY VERIFIED
         if (verification.status === "verified") {
             await connection.rollback();
             transactionStarted = false;
@@ -616,11 +508,7 @@ const verifyLoginOTP = async (req, res) => {
             });
         }
 
-        // BLOCKED / FAILED
-        if (
-            verification.status === "blocked" ||
-            verification.status === "failed"
-        ) {
+        if (["blocked", "failed", "expired"].includes(verification.status)) {
             await connection.rollback();
             transactionStarted = false;
             connection.release();
@@ -628,20 +516,15 @@ const verifyLoginOTP = async (req, res) => {
 
             return res.status(403).json({
                 success: false,
-                message: "Too many failed OTP attempts. Please request a new OTP."
+                message: "This OTP is no longer valid. Please request a new OTP."
             });
         }
 
-        // CHECK EXPIRATION
-        if (
-            new Date(verification.expires_at).getTime() <= Date.now()
-        ) {
+        if (new Date(verification.expires_at).getTime() <= Date.now()) {
             await connection.execute(
-                `
-                UPDATE login_verifications
-                SET status = 'expired'
-                WHERE id = ?
-                `,
+                `UPDATE login_verifications
+                 SET status = 'expired'
+                 WHERE id = ?`,
                 [verification_id]
             );
 
@@ -656,14 +539,11 @@ const verifyLoginOTP = async (req, res) => {
             });
         }
 
-        // CHECK MAXIMUM ATTEMPTS
         if (verification.attempts >= verification.max_attempts) {
             await connection.execute(
-                `
-                UPDATE login_verifications
-                SET status = 'blocked'
-                WHERE id = ?
-                `,
+                `UPDATE login_verifications
+                 SET status = 'blocked'
+                 WHERE id = ?`,
                 [verification_id]
             );
 
@@ -678,25 +558,17 @@ const verifyLoginOTP = async (req, res) => {
             });
         }
 
-        // VERIFY OTP HASH
         const enteredOtpHash = hashOTP(String(otp).trim());
 
         if (enteredOtpHash !== verification.otp_hash) {
             const newAttempts = verification.attempts + 1;
-
             const newStatus =
-                newAttempts >= verification.max_attempts
-                    ? "blocked"
-                    : "pending";
+                newAttempts >= verification.max_attempts ? "blocked" : "pending";
 
             await connection.execute(
-                `
-                UPDATE login_verifications
-                SET
-                    attempts = ?,
-                    status = ?
-                WHERE id = ?
-                `,
+                `UPDATE login_verifications
+                 SET attempts = ?, status = ?
+                 WHERE id = ?`,
                 [newAttempts, newStatus, verification_id]
             );
 
@@ -718,33 +590,19 @@ const verifyLoginOTP = async (req, res) => {
             });
         }
 
-        // =====================================================
-        // OTP SUCCESS
-        // =====================================================
-
-        // MARK OTP VERIFIED
         await connection.execute(
-            `
-            UPDATE login_verifications
-            SET
-                status = 'verified',
-                verified_at = NOW()
-            WHERE id = ?
-            `,
+            `UPDATE login_verifications
+             SET status = 'verified', verified_at = NOW()
+             WHERE id = ?`,
             [verification_id]
         );
 
-        // UPDATE LOGIN HISTORY
         await connection.execute(
-            `
-            UPDATE login_history
-            SET
-                login_status = 'success',
-                otp_required = 1,
-                otp_verified = 1
-            WHERE id = ?
-              AND user_id = ?
-            `,
+            `UPDATE login_history
+             SET login_status = 'success',
+                 otp_required = 1,
+                 otp_verified = 1
+             WHERE id = ? AND user_id = ?`,
             [login_history_id, user_id]
         );
 
@@ -753,7 +611,6 @@ const verifyLoginOTP = async (req, res) => {
         connection.release();
         connection = null;
 
-        // MARK DEVICE AS TRUSTED
         try {
             await markDeviceAsTrusted({
                 userId: user_id,
@@ -761,30 +618,19 @@ const verifyLoginOTP = async (req, res) => {
             });
 
             console.log("Trusted device saved successfully.");
-
         } catch (trustedDeviceError) {
             console.error(
                 "TRUSTED DEVICE SAVE ERROR:",
-                trustedDeviceError
+                trustedDeviceError.message
             );
-
-            // Login continues even if trusted-device saving fails.
         }
 
-        // GET USER DETAILS
         const [users] = await db.execute(
-            `
-            SELECT
-                id,
-                name,
-                email,
-                mobile,
-                preferred_language,
-                must_change_password
-            FROM users
-            WHERE id = ?
-            LIMIT 1
-            `,
+            `SELECT id, name, email, mobile, preferred_language,
+                    must_change_password
+             FROM users
+             WHERE id = ?
+             LIMIT 1`,
             [user_id]
         );
 
@@ -797,70 +643,50 @@ const verifyLoginOTP = async (req, res) => {
 
         const user = users[0];
 
-        // CREATE JWT
         const token = jwt.sign(
-            {
-                id: user.id,
-                email: user.email
-            },
+            { id: user.id, email: user.email },
             process.env.JWT_SECRET,
-            {
-                expiresIn: "1d"
-            }
+            { expiresIn: "1d" }
         );
 
-        // CREATE USER SESSION
         let sessionId = null;
 
         try {
             const [loginHistoryRows] = await db.execute(
-                `
-                SELECT
-                    browser_name,
-                    browser_version,
-                    operating_system,
-                    os_version,
-                    device_type,
-                    device_model,
-                    ip_address
-                FROM login_history
-                WHERE id = ?
-                  AND user_id = ?
-                LIMIT 1
-                `,
+                `SELECT browser_name, browser_version, operating_system,
+                        os_version, device_type, device_model, ip_address
+                 FROM login_history
+                 WHERE id = ? AND user_id = ?
+                 LIMIT 1`,
                 [login_history_id, user_id]
             );
 
             if (loginHistoryRows.length > 0) {
-                const loginEnvironment = loginHistoryRows[0];
-
                 sessionId = await createUserSession({
                     userId: user.id,
                     token,
-                    loginEnvironment
+                    loginEnvironment: loginHistoryRows[0]
                 });
 
                 console.log("OTP login session created:", sessionId);
             }
-
         } catch (sessionError) {
             console.error(
                 "OTP USER SESSION CREATE ERROR:",
-                sessionError
+                sessionError.message
             );
-
             throw sessionError;
         }
 
-        // LOGIN SUCCESS RESPONSE
         return res.status(200).json({
             success: true,
             message: "Login OTP verified successfully.",
             token,
             login_history_id,
             session_id: sessionId,
-            must_change_password: user.must_change_password === 1,
-
+            must_change_password:
+                user.must_change_password === 1 ||
+                user.must_change_password === true,
             user: {
                 id: user.id,
                 name: user.name,
@@ -875,11 +701,10 @@ const verifyLoginOTP = async (req, res) => {
             if (transactionStarted) {
                 await connection.rollback().catch(() => { });
             }
-
             connection.release();
         }
 
-        console.error("VERIFY LOGIN OTP ERROR:", error);
+        console.error("VERIFY LOGIN OTP ERROR:", error.message);
 
         return res.status(500).json({
             success: false,
