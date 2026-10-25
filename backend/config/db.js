@@ -40,9 +40,10 @@ const db = mysql.createPool({
     database: process.env.DB_NAME,
 
     ssl: {
+        ca: process.env.DB_CA_CERT,
         rejectUnauthorized: true,
     },
-
+    
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
