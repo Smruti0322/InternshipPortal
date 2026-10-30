@@ -1,3 +1,4 @@
+
 const nodemailer = require("nodemailer");
 const { Resend } = require("resend");
 
@@ -5,6 +6,13 @@ let smtpTransporter = null;
 let resendClient = null;
 
 const resolveEmailProvider = (env = process.env) => {
+    if (
+        env.BREVO_API_KEY?.trim() &&
+        env.BREVO_FROM_EMAIL?.trim()
+    ) {
+        return "brevo";
+    }
+
     if (env.RESEND_API_KEY?.trim() && env.RESEND_FROM_EMAIL?.trim()) {
         return "resend";
     }
@@ -26,11 +34,19 @@ const describeEmailError = (error, provider = resolveEmailProvider()) => ({
 });
 
 const getMailFrom = (displayName) => {
-    if (resolveEmailProvider() === "resend") {
+    const provider = resolveEmailProvider();
+
+    if (provider === "brevo") {
+        const name = process.env.BREVO_FROM_NAME?.trim() || "Internship Portal";
+        return `"${name}" <${process.env.BREVO_FROM_EMAIL.trim()}>`;
+    }
+
+    if (provider === "resend") {
         return process.env.RESEND_FROM_EMAIL.trim();
     }
 
     const smtpUser = process.env.SMTP_USER?.trim();
+
     if (displayName && smtpUser) {
         return `"${displayName}" <${smtpUser}>`;
     }
@@ -54,9 +70,9 @@ const getSmtpTransporter = () => {
             host: process.env.SMTP_HOST || "smtp.gmail.com",
             port,
             secure: port === 465,
-            connectionTimeout: 10_000,
-            greetingTimeout: 10_000,
-            socketTimeout: 20_000,
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 20000,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
@@ -75,7 +91,56 @@ const normalizeRecipients = (to) => {
     return to ? [to] : [];
 };
 
-const sendViaResend = async ({ from, to, subject, html, text }) => {
+const sendViaBrevo = async ({ to, subject, html, text }) => {
+    const recipients = normalizeRecipients(to).map((recipient) => {
+        if (typeof recipient === "string") {
+            return { email: recipient };
+        }
+
+        return recipient;
+    });
+
+    const payload = {
+        sender: {
+            name: process.env.BREVO_FROM_NAME?.trim() || "Internship Portal",
+            email: process.env.BREVO_FROM_EMAIL.trim(),
+        },
+        to: recipients,
+        subject,
+    };
+
+    if (html) payload.htmlContent = html;
+    if (text) payload.textContent = text;
+
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+            accept: "application/json",
+            "api-key": process.env.BREVO_API_KEY.trim(),
+            "content-type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const error = new Error(
+            result.message || "Brevo failed to send email."
+        );
+        error.name = "BrevoError";
+        error.statusCode = response.status;
+        throw error;
+    }
+
+    if (!result.messageId) {
+        throw new Error("Brevo did not confirm the email request.");
+    }
+
+    return { provider: "brevo", id: result.messageId };
+};
+
+const sendViaResend = async ({ to, subject, html, text }) => {
     const { data, error } = await getResendClient().emails.send({
         from: process.env.RESEND_FROM_EMAIL.trim(),
         to: normalizeRecipients(to),
@@ -118,18 +183,23 @@ const sendEmail = async (options) => {
     }
 
     const recipients = normalizeRecipients(options.to);
+
     if (!recipients.length) {
         throw new Error("Email recipient is required.");
     }
 
     try {
+        if (provider === "brevo") {
+            return await sendViaBrevo(options);
+        }
+
         if (provider === "resend") {
             return await sendViaResend(options);
         }
 
         return await sendViaSmtp(options);
     } catch (error) {
-        console.error("EMAIL SEND ERROR:", describeEmailError(error));
+        console.error("EMAIL SEND ERROR:", describeEmailError(error, provider));
         throw error;
     }
 };
