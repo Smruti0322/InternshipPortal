@@ -1,26 +1,10 @@
 
 const crypto = require("crypto");
-const { Resend } = require("resend");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const { generateOTP } = require("../utils/recoverySecurity");
 const { createUserSession } = require("../utils/sessionSecurity");
-
-// =========================================================
-// RESEND EMAIL CLIENT
-// =========================================================
-
-const getResendClient = () => {
-    if (!process.env.RESEND_API_KEY) {
-        throw new Error("RESEND_API_KEY is not configured.");
-    }
-
-    if (!process.env.RESEND_FROM_EMAIL) {
-        throw new Error("RESEND_FROM_EMAIL is not configured.");
-    }
-
-    return new Resend(process.env.RESEND_API_KEY);
-};
+const { sendEmail, getMailFrom } = require("../utils/sendEmail");
 
 // =========================================================
 // LOGIN OTP EMAIL TRANSLATIONS
@@ -205,12 +189,11 @@ const markDeviceAsTrusted = async ({ userId, loginHistoryId }) => {
 // =========================================================
 
 const sendLoginOTPEmail = async ({ user, otp, emailText }) => {
-    const resend = getResendClient();
     const safeName = escapeHtml(user.name || "User");
 
-    const { data, error } = await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL,
-        to: [user.email],
+    await sendEmail({
+        from: getMailFrom("Internship Portal"),
+        to: user.email,
         subject: emailText.subject,
         text: [
             `${emailText.greeting} ${user.name || "User"},`,
@@ -248,23 +231,6 @@ const sendLoginOTPEmail = async ({ user, otp, emailText }) => {
             </div>
         `
     });
-
-    if (error) {
-        // Do not log the OTP or API key.
-        console.error("RESEND EMAIL ERROR:", {
-            name: error.name,
-            message: error.message,
-            statusCode: error.statusCode
-        });
-
-        throw new Error("Login verification email could not be sent.");
-    }
-
-    if (!data || !data.id) {
-        throw new Error("Email provider did not confirm the email request.");
-    }
-
-    return data.id;
 };
 
 // =========================================================

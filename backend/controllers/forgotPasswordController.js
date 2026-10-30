@@ -1,8 +1,8 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
 const db = require("../config/db");
 const { generateOTP, generateTemporaryPassword, isExpired, hasAttemptsRemaining } = require("../utils/recoverySecurity");
+const { sendEmail, getMailFrom } = require("../utils/sendEmail");
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (character) => ({
     "&": "&amp;",
@@ -11,21 +11,6 @@ const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (character
     "\"": "&quot;",
     "'": "&#39;",
 })[character]);
-
-/*
-=========================================
-EMAIL TRANSPORTER
-=========================================
-*/
-
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    }
-});
-
 
 /*
 =========================================
@@ -100,6 +85,25 @@ const requestOTP = async (req, res) => {
         await connection.beginTransaction();
         transactionStarted = true;
         await connection.execute("SELECT id FROM users WHERE id = ? FOR UPDATE", [user.id]);
+        const [recentRequests] = await connection.execute(
+            "SELECT created_at FROM password_reset_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+            [user.id]
+        );
+        if (recentRequests.length) {
+            const elapsedSeconds = Math.floor((Date.now() - new Date(recentRequests[0].created_at).getTime()) / 1000);
+            if (elapsedSeconds >= 0 && elapsedSeconds < 60) {
+                await connection.rollback();
+                transactionStarted = false;
+                connection.release();
+                connection = null;
+                const remainingSeconds = 60 - elapsedSeconds;
+                return res.status(429).json({
+                    message: `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
+                    cooldown: true,
+                    remainingSeconds,
+                });
+            }
+        }
         const [recentSuccessfulResets] = await connection.execute(
             "SELECT id FROM password_reset_history WHERE user_id = ? AND status = 'completed' AND verification_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1 FOR UPDATE",
             [user.id]
@@ -178,8 +182,8 @@ const requestOTP = async (req, res) => {
         if (resetMethod === "email") {
             const safeName = escapeHtml(user.name || "User");
 
-            await transporter.sendMail({
-                from: process.env.SMTP_USER,
+            await sendEmail({
+                from: getMailFrom("Internship Portal"),
                 to: user.email,
                 subject: "Internship Portal - Password Reset OTP",
                 html: `
@@ -419,8 +423,8 @@ const verifyOTP = async (req, res) => {
                 const user = userRows[0];
 
                 const safeName = escapeHtml(user.name || "User");
-                await transporter.sendMail({
-                    from: process.env.SMTP_USER,
+                await sendEmail({
+                    from: getMailFrom("Internship Portal"),
                     to: user.email,
                     subject: "Internship Portal - Temporary Password",
                     html: `

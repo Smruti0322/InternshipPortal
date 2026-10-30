@@ -1,7 +1,7 @@
 const db = require("../config/db");
-const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const { getClientIp } = require("../utils/loginEnvironment");
+const { sendEmail, getMailFrom } = require("../utils/sendEmail");
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>\"']/g, (character) => ({
     "&": "&amp;",
@@ -559,96 +559,76 @@ const requestFrenchOtp = async (req, res) => {
         const emailText =
             otpEmailTranslations[currentLanguage];
         const safeName = escapeHtml(user.name || "User");
-
         /*
         -------------------------------------------------
-        SMTP
-        -------------------------------------------------
-        */
-
-        const transporter =
-            nodemailer.createTransport({
-                host: process.env.SMTP_HOST,
-                port: Number(
-                    process.env.SMTP_PORT
-                ),
-                secure:
-                    Number(
-                        process.env.SMTP_PORT
-                    ) === 465,
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS,
-                },
-            });
-
-        /*
-        -------------------------------------------------
-        SEND EMAIL
+        SEND FRENCH OTP THROUGH THE SHARED EMAIL PROVIDER
         -------------------------------------------------
         */
 
         try {
-            await transporter.sendMail({
-                from:
-                    `"Internship Portal" <${process.env.SMTP_USER}>`,
+            const html = `
+                <div style="
+                    font-family: Arial, sans-serif;
+                    max-width: 600px;
+                    margin: auto;
+                    padding: 20px;
+                    line-height: 1.6;
+                ">
+                    <h2>${emailText.title}</h2>
+
+                    <p>
+                        ${emailText.hello} ${safeName},
+                    </p>
+
+                    <p>${emailText.request}</p>
+
+                    <p>${emailText.otpText}</p>
+
+                    <h1 style="
+                        letter-spacing: 8px;
+                        text-align: center;
+                    ">
+                        ${otp}
+                    </h1>
+
+                    <p>${emailText.expiry}</p>
+
+                    <p>${emailText.ignore}</p>
+
+                    <p>
+                        ${emailText.regards},<br />
+                        ${emailText.team}
+                    </p>
+                </div>
+            `;
+
+            const text = [
+                `${emailText.hello} ${user.name || "User"},`,
+                "",
+                emailText.request,
+                "",
+                emailText.otpText,
+                otp,
+                "",
+                emailText.expiry,
+                "",
+                emailText.ignore,
+                "",
+                `${emailText.regards},`,
+                emailText.team,
+            ].join("\n");
+
+            await sendEmail({
+                from: getMailFrom("Internship Portal"),
                 to: user.email,
                 subject: emailText.subject,
-
-                html: `
-                    <div style="
-                        font-family: Arial, sans-serif;
-                        max-width: 600px;
-                        margin: auto;
-                        padding: 20px;
-                        line-height: 1.6;
-                    ">
-
-                        <h2>
-                            ${emailText.title}
-                        </h2>
-
-                        <p>
-                            ${emailText.hello} ${safeName},
-                        </p>
-
-                        <p>
-                            ${emailText.request}
-                        </p>
-
-                        <p>
-                            ${emailText.otpText}
-                        </p>
-
-                        <h1 style="
-                            letter-spacing: 8px;
-                            text-align: center;
-                        ">
-                            ${otp}
-                        </h1>
-
-                        <p>
-                            ${emailText.expiry}
-                        </p>
-
-                        <p>
-                            ${emailText.ignore}
-                        </p>
-
-                        <p>
-                            ${emailText.regards},
-                            <br />
-                            ${emailText.team}
-                        </p>
-
-                    </div>
-                `,
+                html,
+                text,
             });
-
         } catch (emailError) {
             /*
             ---------------------------------------------
-            IF EMAIL FAILS, REMOVE OTP
+            IF EMAIL FAILS, REMOVE THE PENDING OTP
             ---------------------------------------------
             */
 
@@ -656,7 +636,7 @@ const requestFrenchOtp = async (req, res) => {
                 `
                 DELETE FROM language_otps
                 WHERE user_id = ?
-                AND otp = ?
+                  AND otp = ?
                 `,
                 [userId, otp]
             );
